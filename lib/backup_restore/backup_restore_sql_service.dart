@@ -1,53 +1,37 @@
-import 'dart:io';
-import 'package:flutter/services.dart';
 import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
 
 class BackupRestoreSqlService {
-
   static final BackupRestoreSqlService instance = BackupRestoreSqlService._instance();
-  Database? _database;
+  final Map<String, Database> _databases = {};
 
-  // db 초기화
-  BackupRestoreSqlService._instance() {
-    // _openDataBase();
-  }
+  BackupRestoreSqlService._instance();
 
-  factory BackupRestoreSqlService() {
-    return instance;
-  }
+  factory BackupRestoreSqlService() => instance;
 
-  Future<Database> get database async {
-    if (_database != null) return _database!;
-    // await _openDataBase();
-    return _database!;
-  }
-  
-
-  // Future<void> _openDataBase() async {
-  //   var dbPath = await getDatabasesPath();
-  // }
-
-  Future<void> getDB(String dbName) async {
-
-    //일반적 인 용도로 사용될 때의 db open
+  /// 💡 [수정]: Assets 관련 코드를 모두 제거하고, 
+  /// 기존 로컬 스마트폰에 있는 DB 파일을 안전하게 연결(Open)하는 기능만 남겼습니다.
+  Future<Database> getDB(String dbName) async {
     var databasesPath = await getDatabasesPath();
     var dbPath = join(databasesPath, '$dbName.db');
-    var exists = await databaseExists(dbPath);
 
-    if (!exists) {
-      try {
-        await Directory(dirname(dbPath)).create(recursive: true);
-      } catch (_) {}
-
-      var data = await rootBundle.load(
-          join('assets/dbs/', '$dbName.db'));
-
-      List<int> bytes = data.buffer.asUint8List(
-          data.offsetInBytes, data.lengthInBytes);
-
-      await File(dbPath).writeAsBytes(bytes, flush: true);
+   // 💡 안전장치: 기존에 서비스 내부 맵에 동일한 커넥션이 열려 있다면 닫아줍니다.
+    if (_databases[dbName] != null && _databases[dbName]!.isOpen) {
+      await _databases[dbName]!.close();
     }
-    _database = await openDatabase(dbPath, readOnly: false);
+
+    final db = await openDatabase(dbPath, readOnly: false);
+    _databases[dbName] = db;
+    return db;
+  }
+
+  /// 복원(Restore) 덮어쓰기 전 안전하게 기존 커넥션을 해제하는 유틸
+  Future<void> closeDatabase(String dbName) async {
+   if (_databases.containsKey(dbName)) {
+      if (_databases[dbName] != null && _databases[dbName]!.isOpen) {
+        await _databases[dbName]!.close();
+      }
+      _databases.remove(dbName);
+    }
   }
 }

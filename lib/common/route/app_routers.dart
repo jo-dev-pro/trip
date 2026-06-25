@@ -5,6 +5,7 @@ import 'package:trip/provider/trip_detail_state.dart';
 import 'package:trip/screen/edit/edit_screen.dart';
 import 'package:trip/screen/home/detail/detail.dart';
 import 'package:trip/screen/home/home_screen.dart';
+import '../../backup_restore/backup_restore_screen.dart';
 import 'route.dart';
 
 class JAppRoute {
@@ -38,11 +39,11 @@ class JAppRoute {
           return EditScreen(tripState: tripState);
         },
       ),
-      // GoRoute(
-      //   path: JRoutes.backup,
-      //   name: JRoutes.backup,
-      //   builder: (context, state) => const BackupRestoreScreen(),
-      // ),
+      GoRoute(
+        path: JRoutes.backup,
+        name: JRoutes.backup,
+        builder: (context, state) => const BackupRestoreScreen(),
+      ),
     ],
   );
 }

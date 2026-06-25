@@ -22,7 +22,7 @@ class HomeScreen extends ConsumerWidget {
     return DefaultTabController(
       length: 2,
       child: Scaffold(
-        backgroundColor: const Color(0xFFF4F6FA), 
+        backgroundColor: const Color(0xFFF4F6FA),
         appBar: AppBar(
           backgroundColor: Colors.indigo.shade700,
           foregroundColor: Colors.white,
@@ -30,6 +30,25 @@ class HomeScreen extends ConsumerWidget {
             '나의 여행 다이어리',
             style: TextStyle(fontWeight: FontWeight.bold),
           ),
+          actions: [
+            Row(
+              children: [
+                GestureDetector(
+                  child: CircleAvatar(
+                    backgroundColor: Colors.grey.withValues(alpha: 0.8),
+                    radius: 20,
+                    child: Icon(
+                      Icons.settings_backup_restore_outlined,
+                      color: Colors.indigo.shade800,
+                      size: 22,
+                    ),
+                  ),
+                  onTap: () => context.pushNamed(JRoutes.backup),
+                ),
+                SizedBox(width: 10),
+              ],
+            ),
+          ],
           elevation: 0,
           bottom: const TabBar(
             labelColor: Colors.white,
@@ -49,7 +68,7 @@ class HomeScreen extends ConsumerWidget {
               return const BuildEmptyState();
             }
             // 💡 이제 List<TripModel> 타입이 정확히 맞아떨어집니다!
-            return _buildTabBarView(list); 
+            return _buildTabBarView(list);
           },
           loading: () => const Center(child: CircularProgressIndicator()),
           error: (err, stack) => Center(
@@ -60,10 +79,10 @@ class HomeScreen extends ConsumerWidget {
           onPressed: () async {
             ref.invalidate(tripFormProvider);
 
-            await Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const CreateScreen()),
-            );
-            
+            await Navigator.of(
+              context,
+            ).push(MaterialPageRoute(builder: (_) => const CreateScreen()));
+
             ref.read(tripListProvider.notifier).refresh();
           },
           backgroundColor: Colors.indigo.shade700,
@@ -85,13 +104,21 @@ class HomeScreen extends ConsumerWidget {
 
     final upcomingList = list.where((trip) {
       if (trip.endDate == null) return false;
-      final end = DateTime(trip.endDate!.year, trip.endDate!.month, trip.endDate!.day);
+      final end = DateTime(
+        trip.endDate!.year,
+        trip.endDate!.month,
+        trip.endDate!.day,
+      );
       return end.isAtSameMomentAs(today) || end.isAfter(today);
     }).toList();
 
     final pastList = list.where((trip) {
       if (trip.endDate == null) return true;
-      final end = DateTime(trip.endDate!.year, trip.endDate!.month, trip.endDate!.day);
+      final end = DateTime(
+        trip.endDate!.year,
+        trip.endDate!.month,
+        trip.endDate!.day,
+      );
       return end.isBefore(today);
     }).toList();
 
@@ -120,14 +147,22 @@ class HomeScreen extends ConsumerWidget {
       itemBuilder: (context, index) {
         final trip = items[index];
 
-        final startStr = trip.startDate != null ? DateFormat('yyyy.MM.dd').format(trip.startDate!) : '';
-        final endStr = trip.endDate != null ? DateFormat('yyyy.MM.dd').format(trip.endDate!) : '';
+        final startStr = trip.startDate != null
+            ? DateFormat('yyyy.MM.dd').format(trip.startDate!)
+            : '';
+        final endStr = trip.endDate != null
+            ? DateFormat('yyyy.MM.dd').format(trip.endDate!)
+            : '';
 
         String dDayStr = '';
         if (!isPast && trip.startDate != null) {
           final now = DateTime.now();
           final today = DateTime(now.year, now.month, now.day);
-          final start = DateTime(trip.startDate!.year, trip.startDate!.month, trip.startDate!.day);
+          final start = DateTime(
+            trip.startDate!.year,
+            trip.startDate!.month,
+            trip.startDate!.day,
+          );
           final difference = start.difference(today).inDays;
 
           if (difference == 0) {
@@ -141,7 +176,9 @@ class HomeScreen extends ConsumerWidget {
 
         return Card(
           margin: const EdgeInsets.only(bottom: 16),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
           elevation: 0.5,
           clipBehavior: Clip.antiAlias,
           child: InkWell(
@@ -152,7 +189,7 @@ class HomeScreen extends ConsumerWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 // ── 💡 대표 이미지 표시 구역 ──
-                // 현재 구조상 TripModel 내부에 이미지가 없으므로, 
+                // 현재 구조상 TripModel 내부에 이미지가 없으므로,
                 // 이미지 로드가 완료되기 전까지는 우선 일관성 있게 에러 빌더(아이콘)나 플레이스홀더를 보여줍니다.
                 // ※ 추후 특정 trip.id에 대응하는 첫 번째 comment.path를 불러오는 프로바이더를 연동하면 완벽합니다.
                 _buildMainImage(trip.id),
@@ -166,9 +203,14 @@ class HomeScreen extends ConsumerWidget {
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 4,
+                            ),
                             decoration: BoxDecoration(
-                              color: isPast ? Colors.grey.shade200 : Colors.indigo.shade50,
+                              color: isPast
+                                  ? Colors.grey.shade200
+                                  : Colors.indigo.shade50,
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: Text(
@@ -176,7 +218,9 @@ class HomeScreen extends ConsumerWidget {
                               style: TextStyle(
                                 fontSize: 12,
                                 fontWeight: FontWeight.bold,
-                                color: isPast ? Colors.grey.shade700 : Colors.indigo.shade700,
+                                color: isPast
+                                    ? Colors.grey.shade700
+                                    : Colors.indigo.shade700,
                               ),
                             ),
                           ),
@@ -266,7 +310,8 @@ class HomeScreen extends ConsumerWidget {
             }
 
             // 경로 규칙 분기 (네트워크 URL 인지 로컬 기기 파일 경로 인지 구분)
-            final isNetwork = imagePath.startsWith('http') || imagePath.startsWith('https');
+            final isNetwork =
+                imagePath.startsWith('http') || imagePath.startsWith('https');
 
             return SizedBox(
               height: 150,
@@ -275,12 +320,14 @@ class HomeScreen extends ConsumerWidget {
                   ? Image.network(
                       imagePath,
                       fit: BoxFit.cover,
-                      errorBuilder: (ctx, err, stack) => _buildPlaceholderImage(),
+                      errorBuilder: (ctx, err, stack) =>
+                          _buildPlaceholderImage(),
                     )
                   : Image.file(
                       File(imagePath),
                       fit: BoxFit.cover,
-                      errorBuilder: (ctx, err, stack) => _buildPlaceholderImage(),
+                      errorBuilder: (ctx, err, stack) =>
+                          _buildPlaceholderImage(),
                     ),
             );
           },
