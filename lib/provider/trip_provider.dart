@@ -224,9 +224,14 @@ class TripFormNotifier extends _$TripFormNotifier {
         );
       }
 
-      // 상태 전파 및 캐시 무효화로 새로고침 유도
-      ref.read(tripListProvider.notifier).refresh();
+// 💡 [추가 포인트 3]: 무효화(invalidate) 순서 정돈 및 디테일 새로고침 강제화
+      // 1. 리스트 화면 프로바이더 무효화
+      ref.invalidate(tripListProvider);
+
+      // 2. 디테일 화면 프로바이더 무효화 및 즉시 새 데이터 로드 대기
       ref.invalidate(tripDetailProvider(savedTripId));
+      // 디테일 화면이 즉시 리빌드되도록 확실히 하기 위해 read 호출로 한 번 깨워줍니다.
+      await ref.read(tripDetailProvider(savedTripId).future);
 
       // 💡 최종 상태 역시 TripFormState 구조에 맞추어 갱신해 줍니다.
       state = AsyncData(TripFormState(

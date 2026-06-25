@@ -79,14 +79,14 @@ class _ImagePickerSheetState extends ConsumerState<ImagePickerSheet> {
             ),
             // 헤더 영역
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+              padding: const EdgeInsets.only(top:4, bottom: 4, left: 16, right: 10),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
                     '사진 선택',
                     style: TextStyle(
-                      fontSize: 17,
+                      fontSize: 16,
                       fontWeight: FontWeight.bold,
                       color: Colors.indigo.shade800,
                     ),
@@ -96,19 +96,19 @@ class _ImagePickerSheetState extends ConsumerState<ImagePickerSheet> {
                       TextButton(
                         onPressed: _pickFromGallery,
                         child: Text(
-                          '갤러리 열기',
+                          '갤러리열기 ',
                           style: TextStyle(color: Colors.indigo.shade600),
                         ),
                       ),
                       if (_selectedIndexes.isNotEmpty) ...[
-                        const SizedBox(width: 8),
+                        // const SizedBox(width: 8),
                         ElevatedButton(
                           onPressed: _confirmSelection,
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.indigo.shade700,
                             foregroundColor: Colors.white,
                             padding: const EdgeInsets.symmetric(
-                              horizontal: 14,
+                              horizontal: 8,
                               vertical: 8,
                             ),
                             shape: RoundedRectangleBorder(

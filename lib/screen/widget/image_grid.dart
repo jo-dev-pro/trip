@@ -84,7 +84,7 @@ class ImageGrid extends StatelessWidget {
               ),
               // 삭제 버튼
               IconButton(
-                icon: Icon(Icons.close_rounded,
+                icon: Icon(Icons.delete_outline,
                     color: Colors.red.shade400, size: 20),
                 onPressed: () => onRemove(i),
               ),
