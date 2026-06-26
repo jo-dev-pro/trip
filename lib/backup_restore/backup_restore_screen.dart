@@ -6,21 +6,26 @@ import 'package:trip/provider/trip_provider.dart';
 
 import 'backup_restore_provider.dart';
 
-
-class BackupRestoreScreen extends ConsumerWidget {
+// 💡 [개선]: 로딩 상태(_isLoading)를 화면 내부에서 제어하기 위해 
+// ConsumerWidget에서 ConsumerStatefulWidget으로 변경합니다.
+class BackupRestoreScreen extends ConsumerStatefulWidget {
   const BackupRestoreScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<BackupRestoreScreen> createState() => _BackupRestoreScreenState();
+}
+
+class _BackupRestoreScreenState extends ConsumerState<BackupRestoreScreen> {
+  bool _isLoading = false; // 🎯 화면 전역 로딩 상태 변수 추가
+
+  @override
+  Widget build(BuildContext context) {
     final controller = ref.watch(backupRestoreProvider);
     final controllerNotifier = ref.read(backupRestoreProvider.notifier);
-
     final isDark = JHelperFunctions.isDarkMode(context);
 
     return Scaffold(
-      backgroundColor: isDark
-          ? const Color(0xFF121212)
-          : const Color(0xFFF8F9FA),
+      backgroundColor: isDark ? const Color(0xFF121212) : const Color(0xFFF8F9FA),
       body: SafeArea(
         child: CustomScrollView(
           slivers: [
@@ -31,18 +36,14 @@ class BackupRestoreScreen extends ConsumerWidget {
                 child: Row(
                   children: [
                     IconButton(
-                      onPressed: () => context.pop(), // 💡 GoRouter 방식 뒤로가기
-                      icon: Icon(
-                        Icons.arrow_back_ios_new_rounded,
-                      ),
+                      // 💡 로딩 중에는 뒤로가기 버튼을 막아 오작동을 방지합니다.
+                      onPressed: _isLoading ? null : () => context.pop(), 
+                      icon: const Icon(Icons.arrow_back_ios_new_rounded),
                     ),
                     const SizedBox(width: 8),
-                    Text(
+                    const Text(
                       '백업 & 복원',
-                      style: TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.w800,
-                      ),
+                      style: TextStyle(fontSize: 24, fontWeight: FontWeight.w800),
                     ),
                   ],
                 ),
@@ -57,18 +58,15 @@ class BackupRestoreScreen extends ConsumerWidget {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      'DB를 선택해 주세요',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700,
-                      ),
+                      _isLoading ? '데이터를 처리하는 중입니다...' : '백업/복원할 항목을 선택해 주세요',
+                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
                     ),
                   ],
                 ),
               ),
             ),
 
-            // ── DB 선택 목록 (Sliver 구조 완벽 통합 및 중첩 해제) ──
+            // ── DB 선택 목록 ──
             SliverPadding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
               sliver: SliverList(
@@ -93,27 +91,21 @@ class BackupRestoreScreen extends ConsumerWidget {
                         ],
                       ),
                       child: CheckboxListTile(
+                        // 💡 로딩 중에는 체크박스 조작을 비활성화합니다.
+                        enabled: !_isLoading, 
                         title: Text(
                           dbName,
-                          style: TextStyle(
-                            fontWeight: FontWeight.w600,
-                          ),
+                          style: const TextStyle(fontWeight: FontWeight.w600),
                         ),
                         checkColor: Colors.white,
-                        activeColor: const Color(
-                          0xFF1A5CFF,
-                        ), // 💡 테마 맞춤형 포인트 컬러
+                        activeColor: const Color(0xFF1A5CFF),
                         controlAffinity: ListTileControlAffinity.leading,
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 4,
-                        ),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                         checkboxShape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(6),
                         ),
                         value: isChecked,
                         onChanged: (value) {
-                          // 💡 Notifier를 통한 상태 변경 로직 실행
                           controllerNotifier.toggleCheck(index, value ?? false);
                         },
                       ),
@@ -148,65 +140,87 @@ class BackupRestoreScreen extends ConsumerWidget {
         ),
         child: Row(
           children: [
+            // ── 백업 버튼 ──
             Expanded(
               child: ElevatedButton(
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFE0E4EF),
-                  foregroundColor: const Color(0xFF4D7FFF),
+                  backgroundColor: Colors.indigo.shade200,
+                  foregroundColor: Colors.indigo.shade500,
                   elevation: 0,
                   minimumSize: const Size(double.infinity, 52),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14),
-                  ),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                 ),
-                onPressed: () async {
-                  bool isSuccess = await ref
-                      .read(backupRestoreProvider.notifier)
-                      .dbBackupRestore('backup', context);
-                  // 2. 작업이 성공(true)했고, 화면이 여전히 살아있는 상태라면 화면을 닫아줍니다.
-                  // 💡 만약 위에서 선택된 DB가 없어 false가 반환되었다면 이 조건문을 건너뛰므로 화면이 닫히지 않습니다!
-                  if (isSuccess && context.mounted) {
-                    Navigator.pop(context);
+                // 💡 로딩 중에는 대기 및 클릭 유도 방지
+                onPressed: _isLoading ? null : () async {
+                  setState(() => _isLoading = true); // 1. 로딩 시작
+
+                  try {
+                    bool isSuccess = await ref
+                        .read(backupRestoreProvider.notifier)
+                        .dbBackupRestore('backup', context);
+
+                    if (!mounted) return;
+                    setState(() => _isLoading = false); // 2. 로딩 종료
+
+                    // 💡 [통일]: Navigator.pop 대신 프로젝트 스택에 맞춰 context.pop() 사용
+                    if (isSuccess) {
+                      context.pop(); 
+                    }
+                  } catch (_) {
+                    if (mounted) setState(() => _isLoading = false);
                   }
                 },
-                child: const Text(
-                  '백업',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
-                ),
+                child: _isLoading 
+                    ? SizedBox(
+                        width: 24, 
+                        height: 24, 
+                        child: CircularProgressIndicator(color: Colors.indigo.shade500, strokeWidth: 2)
+                      )
+                    : const Text('백업', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
               ),
             ),
             const SizedBox(width: 12),
+            
+            // ── 복원 버튼 ──
             Expanded(
               child: ElevatedButton(
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF1A5CFF),
+                  backgroundColor: Colors.indigo.shade500,
                   foregroundColor: Colors.white,
                   elevation: 0,
                   minimumSize: const Size(double.infinity, 52),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14),
-                  ),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                 ),
-                onPressed: () async {
-                  bool isSuccess = await ref
-                      .read(backupRestoreProvider.notifier)
-                      .dbBackupRestore('restore', context);
+                onPressed: _isLoading ? null : () async {
+                  setState(() => _isLoading = true); // 1. 로딩 시작
 
-                  if (isSuccess && context.mounted) {
-                    // 1. 화면을 먼저 닫아서 UI 트리 관계를 정리합니다.
-                    Navigator.pop(context);
+                  try {
+                    bool isSuccess = await ref
+                        .read(backupRestoreProvider.notifier)
+                        .dbBackupRestore('restore', context);
 
-                    // 2. 아주 잠깐(10~50ms) 뒤에 부모 화면의 프로바이더를 새로고침합니다.
-                    // 이렇게 하면 현재 화면의 dispose 사이클과 충돌하지 않습니다.
-                    Future.delayed(const Duration(milliseconds: 50), () {
-                      ref.invalidate(tripListProvider);
-                    });
+                    if (!mounted) return;
+                    setState(() => _isLoading = false); // 2. 로딩 종료
+
+                    if (isSuccess) {
+                      context.pop(); // 💡 [통일]: 복원 성공 시 안전하게 뒤로가기
+
+                      // 3. 부모 화면 리스트 갱신 연쇄 트리거
+                      Future.delayed(const Duration(milliseconds: 50), () {
+                        ref.invalidate(tripListProvider);
+                      });
+                    }
+                  } catch (_) {
+                    if (mounted) setState(() => _isLoading = false);
                   }
                 },
-                child: const Text(
-                  '복원',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
-                ),
+                child: _isLoading 
+                    ? const SizedBox(
+                        width: 24, 
+                        height: 24, 
+                        child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)
+                      )
+                    : const Text('복원', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
               ),
             ),
           ],

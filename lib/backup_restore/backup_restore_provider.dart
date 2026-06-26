@@ -6,8 +6,6 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:sqflite/sqflite.dart';
 
 import '../common/util/loaders/loaders.dart';
-import '../model/daily_note_model.dart';
-import '../model/trip_comment_model.dart';
 import '../model/trip_model.dart';
 import 'backup_restore_sql_service.dart';
 import 'backup_restore_state.dart';
@@ -16,19 +14,20 @@ part 'backup_restore_provider.g.dart';
 
 @riverpod
 class BackupRestore extends _$BackupRestore {
-  // 백업과 복원 모두 대문자 'Download'로 통일
   String targetDirPath = '/storage/emulated/0/Download/dbs/';
+  final _sqlService = BackupRestoreSqlService();
 
   @override
   BackupRestoreState build() {
     return BackupRestoreState(
-      showDbNameList: ['여행', '여행이미지', '여행일자코멘트'],
+      // 💡 [개선]: UI에는 깔끔하게 통합 문구 하나만 보여줍니다.
+      showDbNameList: ['여행 통합 데이터 (이미지, 메모 포함)'],
+      
+      // 🎯 [개선]: 실제 물리 파일명인 'trip' 하나만 리스트에 담습니다.
       checkedDbNameList: [
-        TripDbInfo.tableName,
-        TripCommentDbInfo.tableName,
-        TripDailyNoteDbInfo.tableName,
-      ],
-      checkedDbList: [false, false, false],
+        TripDbInfo.tableName, // 'trip' 
+      ], 
+      checkedDbList: [false],
       selectedCount: 0,
     );
   }
@@ -37,157 +36,107 @@ class BackupRestore extends _$BackupRestore {
     final newCheckedDbList = [...state.checkedDbList];
     newCheckedDbList[index] = value;
 
-    int newCount = state.selectedCount;
-    if (value == true) {
-      newCount++;
-    } else {
-      newCount--;
-    }
+    int newCount = state.selectedCount + (value ? 1 : -1);
 
     state = state.copyWith(
       checkedDbList: newCheckedDbList,
       selectedCount: newCount,
     );
-
-    if (newCount > 0) {
-      _openCreatedDB();
-    }
   }
 
-  Future<void> _openCreatedDB() async {
-    for (int i = 0; i < state.checkedDbNameList.length; i++) {
-      // 💡 비동기 루프 진입 전 체크
-      if (!ref.mounted) return;
-      await _getDataBase(state.checkedDbNameList[i]);
-    }
-  }
-
-  Future<void> _getDataBase(String dbName) async {
-    BackupRestoreSqlService sqlService = BackupRestoreSqlService();
-    await sqlService.getDB(dbName);
-  }
-
+  /// 백업 및 복원 컨트롤 타워
   Future<bool> dbBackupRestore(String type, BuildContext context) async {
-    // 0. 선택된 DB가 없을 때 예외 처리 (루프 돌기 전에 먼저 체크하는 것이 효율적입니다)
     if (state.selectedCount == 0) {
-      JLoaders.warningSnackBar(
-        context,
-        title: '오류!!',
-        message: '선택된 DB가 없습니다.',
-      );
+      JLoaders.warningSnackBar(context, title: '오류!!', message: '백업/복원할 항목을 선택해 주세요.');
       return false;
     }
 
-    // 💡 [핵심] for문 진입 전, 필요한 리스트 데이터를 로컬 변수에 완전히 복사합니다.
-    // 이렇게 하면 루프 도중 provider가 dispose되어도 영향을 받지 않습니다.
-    final List<bool> localCheckedDbList = [...state.checkedDbList];
-    final List<String> localCheckedDbNameList = [...state.checkedDbNameList];
-
-    // 1. 선택된 타겟 비즈니스 로직 순차 실행
-    for (int i = 0; i < localCheckedDbList.length; i++) {
-      if (localCheckedDbList[i] == true) {
-        final dbName = localCheckedDbNameList[i];
-
-        if (type == 'backup') {
-          await _backup(dbName);
-        } else if (type == 'restore') {
-          await _restore(dbName);
-        } else {
-          await _getDataBase(dbName);
-        }
-      }
-    }
-
-    // 💡 모든 비동기 작업이 끝난 후, UI 작업을 하기 직전에만 딱 한 번 mounted 체크!
-    if (!ref.mounted) return false;
-
-    // 3. 피드백 스낵바 노출 처리 구조
     try {
+      // 🎯 [개선]: 리스트가 단 1개이므로 복잡한 반복문이나 Set 구조 없이 index 0번 고정 처리합니다.
+      final dbName = state.checkedDbNameList[0];
+
       if (type == 'backup') {
-        if (!context.mounted) return false;
-        JLoaders.successSnackBar(
-          context,
-          title: '백업 완료',
-          message: '백업이 완료 되었습니다(경로: phone/download/dbs/)',
-        );
+        await _backup(dbName);
       } else if (type == 'restore') {
-        if (!context.mounted) return false;
-        JLoaders.successSnackBar(
-          context,
-          title: '복원 완료',
-          message: '복원이 완료 되었습니다(경로: phone/download/dbs/)',
-        );
-      } else {
-        if (!context.mounted) return false;
-        JLoaders.successSnackBar(
-          context,
-          title: 'DB 가져오기 완료',
-          message: 'assets에서 DB 가져오기가 완료 되었습니다',
-        );
+        await _restore(dbName);
       }
+
+      if (!ref.mounted) return false;
+
+      // 3. 성공 피드백 안내
+      if (!context.mounted) return false;
+      JLoaders.successSnackBar(
+        context,
+        title: type == 'backup' ? '백업 완료' : '복원 완료',
+        message: type == 'backup' 
+            ? '전체 데이터가 안전하게 백업되었습니다.\n(경로: Download/dbs/)'
+            : '전체 데이터 복원이 완료되었습니다.',
+      );
       return true;
     } catch (e) {
       if (!context.mounted) return false;
-      JLoaders.errorSnackBar(
-        context,
-        title: 'DB 백업 오류!!',
-        message: e.toString(),
-      );
+      
+      String errorMessage = e.toString();
+      if (errorMessage.startsWith('Exception: ')) {
+        errorMessage = errorMessage.replaceFirst('Exception: ', '');
+      }
+
+      JLoaders.errorSnackBar(context, title: '작업 실패', message: errorMessage);
       return false;
     }
   }
 
+  /// 내부 백업 로직
   Future<void> _backup(String dbName) async {
     final dbPath = await getDatabasesPath();
     File source = File(join(dbPath, '$dbName.db'));
     var exists = await databaseExists(source.path);
 
-    if (exists) {
-      // 1. 안드로이드 권한 체크 및 요청
-      if (await Permission.manageExternalStorage.request().isGranted ||
-          await Permission.storage.request().isGranted) {
-        // 비동기 갭 체크
-        if (!ref.mounted) return;
+    if (!exists) {
+      throw Exception('백업할 데이터가 존재하지 않습니다.');
+    }
 
-        // 2. 백업 대상 폴더 생성
-        Directory copyTo = Directory(targetDirPath);
-        await copyTo.create(recursive: true);
+    if (await Permission.manageExternalStorage.request().isGranted ||
+        await Permission.storage.request().isGranted) {
+      if (!ref.mounted) return;
 
-        // 3. 올바른 경로 조립 및 복사 (File.create는 불필요하므로 삭제)
-        String newPath = join(copyTo.path, '$dbName.db');
-        await source.copy(newPath);
-      } else {
-        // 권한 거부 시 예외 처리 혹은 로그
-        print("저장소 권한이 거부되어 백업을 진행할 수 없습니다.");
-      }
+      Directory copyTo = Directory(targetDirPath);
+      await copyTo.create(recursive: true);
+
+      String newPath = join(copyTo.path, '$dbName.db');
+      await source.copy(newPath);
+    } else {
+      throw Exception('저장소 접근 권한이 거부되었습니다.');
     }
   }
 
+  /// 내부 복원 로직
   Future<void> _restore(String dbName) async {
     var databasesPath = await getDatabasesPath();
     var dbPath = join(databasesPath, '$dbName.db');
 
-    // 1. 안드로이드 권한 체크 및 요청
     if (await Permission.manageExternalStorage.request().isGranted ||
         await Permission.storage.request().isGranted) {
-      // 비동기 갭 체크
       if (!ref.mounted) return;
 
-      // 2. 복원할 원본 파일 경로 조립
       Directory backupPath = Directory(targetDirPath);
       String newPath = join(backupPath.path, '$dbName.db');
-
       File source = File(newPath);
 
-      // 3. 💡 복원 전 파일이 실제로 존재하지 않으면 중단 (안전장치)
       if (!await source.exists()) {
-        return;
+        throw Exception('Download/dbs/ 폴더에 백업 파일($dbName.db)이 존재하지 않습니다.');
       }
 
-      // 4. 안전하게 덮어쓰기 복사
+      // 복사 전 기존 커넥션 해제 (DB Lock 방지)
+      await _sqlService.closeDatabase(dbName);
+
+      // 파일 안정적 덮어쓰기
       await source.copy(dbPath);
+
+      // 복원 종료 후 재오픈
+      await _sqlService.getDB(dbName);
     } else {
-      print("저장소 권한이 거부되어 복원을 진행할 수 없습니다.");
+      throw Exception('저장소 접근 권한이 거부되었습니다.');
     }
   }
 }

@@ -77,7 +77,7 @@ flutter_launcher_icons:
   android: "launcher_icon"
   #  ios: "AppIcon"
   #  image_path_ios: "assets/logo.jpg"
-  image_path_android: "assets/map.png"
+  image_path_android: "assets/location.png"
   remove_alpha_ios: true
 
 # For information on the generic Dart part of this file, see the

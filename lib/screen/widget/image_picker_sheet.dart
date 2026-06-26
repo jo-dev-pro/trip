@@ -101,6 +101,10 @@ class _ImagePickerSheetState extends ConsumerState<ImagePickerSheet> {
                         ),
                       ),
                       if (_selectedIndexes.isNotEmpty) ...[
+<<<<<<< HEAD
+=======
+                        // const SizedBox(width: 8),
+>>>>>>> 55523d54b2afbff8f30474235795e0c15d6c616a
                         ElevatedButton(
                           onPressed: _confirmSelection,
                           style: ElevatedButton.styleFrom(

@@ -31,6 +31,7 @@ class HomeScreen extends ConsumerWidget {
             style: TextStyle(fontWeight: FontWeight.bold),
           ),
           actions: [
+<<<<<<< HEAD
             // 새 일정 추가 버튼
             TextButton.icon(
               onPressed: () async {
@@ -60,6 +61,25 @@ class HomeScreen extends ConsumerWidget {
               onTap: () => context.pushNamed(JRoutes.backup),
             ),
             const SizedBox(width: 10),
+=======
+            Row(
+              children: [
+                GestureDetector(
+                  child: CircleAvatar(
+                    backgroundColor: Colors.grey.withValues(alpha: 0.8),
+                    radius: 20,
+                    child: Icon(
+                      Icons.settings_backup_restore_outlined,
+                      color: Colors.indigo.shade800,
+                      size: 22,
+                    ),
+                  ),
+                  onTap: () => context.pushNamed(JRoutes.backup),
+                ),
+                SizedBox(width: 10),
+              ],
+            ),
+>>>>>>> 55523d54b2afbff8f30474235795e0c15d6c616a
           ],
           elevation: 0,
           bottom: const TabBar(
@@ -88,6 +108,23 @@ class HomeScreen extends ConsumerWidget {
           ),
         ),
 
+<<<<<<< HEAD
+=======
+            await Navigator.of(
+              context,
+            ).push(MaterialPageRoute(builder: (_) => const CreateScreen()));
+
+            ref.read(tripListProvider.notifier).refresh();
+          },
+          backgroundColor: Colors.indigo.shade700,
+          foregroundColor: Colors.white,
+          icon: const Icon(Icons.add_location_alt_outlined),
+          label: const Text(
+            '새 일정 추가',
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
+        ),
+>>>>>>> 55523d54b2afbff8f30474235795e0c15d6c616a
       ),
     );
   }

@@ -1,3 +1,4 @@
+import 'package:sqflite/sqflite.dart';
 import 'package:trip/model/trip_model.dart';
 import 'package:trip/model/trip_comment_model.dart';
 import 'package:trip/model/daily_note_model.dart';
@@ -100,7 +101,18 @@ class TripRepository {
   Future<int> insertDailyNote(DailyNoteModel note) async {
     final db = await _dbHelper.database;
     final json = note.toJson()..remove(TripDailyNoteDbInfo.id);
-    return await db.insert(TripDailyNoteDbInfo.tableName, json);
+    // id가 있으면(기존 데이터) 기존 id를 유지하여 덮어쓰고, 없으면 제거하여 자동 생성되게 합니다.
+    if (note.id == null) {
+      json.remove(TripDailyNoteDbInfo.id);
+    }
+    
+    // 💡 [수정 포인트 1]: conflictAlgorithm을 추가하여 
+    // 동일한 ID가 있거나 겹치는 상황이 발생하면 덮어쓰기(replace)하도록 안전장치를 만듭니다.
+    return await db.insert(
+      TripDailyNoteDbInfo.tableName, 
+      json,
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
   }
 
   // 9. 일별 노트 수정 (updateDailyNote)
@@ -132,22 +144,18 @@ class TripRepository {
         whereArgs: [updatedTrip.id],
       );
 
-      // 2. 새로운 종료일(endDate)보다 늦은 날짜의 DailyNote 삭제
-      // 💡 SQLite에서는 'yyyy-MM-dd' 문자열 형식 그대로 대소비교(>)가 가능합니다.
-      await txn.delete(
-        TripDailyNoteDbInfo.tableName,
-        where: '${TripDailyNoteDbInfo.tripId} = ? AND date > ?',
-        whereArgs: [updatedTrip.id, updatedTrip.endDate],
-      );
+      // 💡 [수정 포인트 2]: 계산된 총 일수(totalDays)를 구한 뒤, 
+      // 이 일수를 초과하는 dayCount 데이터를 DB에서 물리적으로 삭제합니다.
+      if (updatedTrip.startDate != null && updatedTrip.endDate != null) {
+        final totalDays = updatedTrip.endDate!.difference(updatedTrip.startDate!).inDays + 1;
 
-      // (선택사항) 만약 시작일도 뒤로 미뤄져서 시작일보다 앞선 노트도 지워야 한다면 아래 주석을 해제하세요.
-      /*
-      await txn.delete(
-        'daily_notes',
-        where: 'tripId = ? AND date < ?',
-        whereArgs: [updatedTrip.id, updatedTrip.startDate],
-      );
-      */
+        await txn.delete(
+          TripDailyNoteDbInfo.tableName,
+          // 🎯 date 대신 실제 데이터의 기준인 dayCount로 매핑 조건을 변경합니다.
+          where: '${TripDailyNoteDbInfo.tripId} = ? AND ${TripDailyNoteDbInfo.dayCount} > ?',
+          whereArgs: [updatedTrip.id, totalDays],
+        );
+      }
     });
 
     return result;

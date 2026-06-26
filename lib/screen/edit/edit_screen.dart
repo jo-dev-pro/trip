@@ -56,9 +56,7 @@ class _EditScreenState extends ConsumerState<EditScreen> {
     final dailyNotes = widget.tripState.dailyNotes;
 
     // 💡 [수정]: 2번 대안 아키텍처 명세에 맞게 dailyNotes까지 포함해 3가지 데이터 팩을 전송합니다.
-    ref
-        .read(tripFormProvider.notifier)
-        .setTravel(trip, comments, dailyNotes);
+    ref.read(tripFormProvider.notifier).setTravel(trip, comments, dailyNotes);
 
     // 기본 입력 필드 데이터 동기화
     _titleCtrl.text = trip.title;
@@ -126,6 +124,9 @@ class _EditScreenState extends ConsumerState<EditScreen> {
 
     // 3. 만약 기간이 줄어들었다면 경고 팝업 노출
     if (newDays < originalDays) {
+      // 💡 빌드 컨텍스트 사용 전 안전하게 mounted 체크를 넣어주는 것이 좋습니다.
+      if (!mounted) return;
+      
       final bool? confirm = await showDialog<bool>(
         context: context,
         builder: (ctx) => AlertDialog(
@@ -133,7 +134,7 @@ class _EditScreenState extends ConsumerState<EditScreen> {
             borderRadius: BorderRadius.circular(16),
           ),
           title: const Text(
-            '旅行 기간 축소 안내',
+            '여행 기간 축소 안내',
             style: TextStyle(fontWeight: FontWeight.bold),
           ),
           content: const Text(
@@ -206,7 +207,13 @@ class _EditScreenState extends ConsumerState<EditScreen> {
     );
 
     if (mounted) {
-      // 저장이 성공적으로 완료되면 창을 닫고 디테일 뷰로 리턴합니다.
+      final tripId = widget.tripState.trip.id;
+      if (tripId != null) {
+        // 💡 디테일 화면 프로바이더(tripDetailProvider)의 캐시를 무효화하여 
+        // 이전 화면으로 돌아갔을 때 새롭게 수정된 DB 데이터를 다시 긁어오도록 트리거를 당깁니다.
+        ref.invalidate(tripDetailProvider(tripId));
+      }
+      
       Navigator.of(context).pop();
     }
   }
