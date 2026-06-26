@@ -15,7 +15,7 @@ abstract class TripModel with _$TripModel {
     DateTime? startDate,
     DateTime? endDate,
     String? note,
-
+    String? coverImagePath, // 💡 대표 이미지 경로
   }) = _TripModel;
 
   factory TripModel.fromJson(Map<String, dynamic> json) => _$TripModelFromJson(json);
@@ -31,4 +31,5 @@ class TripDbInfo {
   static String startDate = 'startDate';
   static String endDate = 'endDate';
   static String note = 'note';
+  static String coverImagePath = 'coverImagePath'; // 💡 추가
 }

@@ -17,6 +17,7 @@ _TripModel _$TripModelFromJson(Map<String, dynamic> json) => _TripModel(
       ? null
       : DateTime.parse(json['endDate'] as String),
   note: json['note'] as String?,
+  coverImagePath: json['coverImagePath'] as String?,
 );
 
 Map<String, dynamic> _$TripModelToJson(_TripModel instance) =>
@@ -27,4 +28,5 @@ Map<String, dynamic> _$TripModelToJson(_TripModel instance) =>
       'startDate': instance.startDate?.toIso8601String(),
       'endDate': instance.endDate?.toIso8601String(),
       'note': instance.note,
+      'coverImagePath': instance.coverImagePath,
     };

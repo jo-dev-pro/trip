@@ -64,6 +64,8 @@ class _CreateScreenState extends ConsumerState<CreateScreen> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
+      isDismissible: false,   // 💡 외부 터치로 닫히지 않게
+      enableDrag: false,      // 💡 드래그로 닫히지 않게
       builder: (_) => const ImagePickerSheet(),
     );
   }
@@ -312,6 +314,8 @@ class _CreateScreenState extends ConsumerState<CreateScreen> {
                           images: currentImages,
                           onRemove: notifier.removeImage,
                           onCommentChanged: notifier.updateImageComment,
+                          coverImagePath: notifier.coverImagePath,
+                          onCoverImageChanged: notifier.setCoverImage,
                         ),
                       ] else
                         const SizedBox.shrink(),

@@ -85,7 +85,7 @@ final class TripFormNotifierProvider
   }
 }
 
-String _$tripFormNotifierHash() => r'b3a9f659ce60cfede4861d6d3912437477f6d61e';
+String _$tripFormNotifierHash() => r'd35c1cce8862a38357aaf72f91d1423c09cf355a';
 
 abstract class _$TripFormNotifier extends $Notifier<AsyncValue<TripFormState>> {
   AsyncValue<TripFormState> build();
@@ -195,20 +195,20 @@ abstract class _$TripDetail extends $AsyncNotifier<TripDetailState> {
   }
 }
 
-/// 특정 여행 ID(tripId)에 등록된 이미지 목록 중 첫 번째 이미지 경로를 반환하는 함수형 프로바이더
-/// ✨ 특정 여행 ID(tripId)의 DB를 직접 조회하여 등록된 이미지 중 첫 번째 이미지 경로를 반환합니다.
+/// 특정 여행 ID(tripId)에 등록된 대표 이미지 경로를 반환하는 함수형 프로바이더
+/// ✨ coverImagePath → 없으면 첫 번째 comment.path 순으로 폴백
 
 @ProviderFor(tripFirstImage)
 final tripFirstImageProvider = TripFirstImageFamily._();
 
-/// 특정 여행 ID(tripId)에 등록된 이미지 목록 중 첫 번째 이미지 경로를 반환하는 함수형 프로바이더
-/// ✨ 특정 여행 ID(tripId)의 DB를 직접 조회하여 등록된 이미지 중 첫 번째 이미지 경로를 반환합니다.
+/// 특정 여행 ID(tripId)에 등록된 대표 이미지 경로를 반환하는 함수형 프로바이더
+/// ✨ coverImagePath → 없으면 첫 번째 comment.path 순으로 폴백
 
 final class TripFirstImageProvider
     extends $FunctionalProvider<AsyncValue<String?>, String?, FutureOr<String?>>
     with $FutureModifier<String?>, $FutureProvider<String?> {
-  /// 특정 여행 ID(tripId)에 등록된 이미지 목록 중 첫 번째 이미지 경로를 반환하는 함수형 프로바이더
-  /// ✨ 특정 여행 ID(tripId)의 DB를 직접 조회하여 등록된 이미지 중 첫 번째 이미지 경로를 반환합니다.
+  /// 특정 여행 ID(tripId)에 등록된 대표 이미지 경로를 반환하는 함수형 프로바이더
+  /// ✨ coverImagePath → 없으면 첫 번째 comment.path 순으로 폴백
   TripFirstImageProvider._({
     required TripFirstImageFamily super.from,
     required int super.argument,
@@ -252,10 +252,10 @@ final class TripFirstImageProvider
   }
 }
 
-String _$tripFirstImageHash() => r'dc9dd916c67442960f19da85cfb463132ec9feaa';
+String _$tripFirstImageHash() => r'1aab43a5e0c8976ddb70833d6cd5d72ba0334d3d';
 
-/// 특정 여행 ID(tripId)에 등록된 이미지 목록 중 첫 번째 이미지 경로를 반환하는 함수형 프로바이더
-/// ✨ 특정 여행 ID(tripId)의 DB를 직접 조회하여 등록된 이미지 중 첫 번째 이미지 경로를 반환합니다.
+/// 특정 여행 ID(tripId)에 등록된 대표 이미지 경로를 반환하는 함수형 프로바이더
+/// ✨ coverImagePath → 없으면 첫 번째 comment.path 순으로 폴백
 
 final class TripFirstImageFamily extends $Family
     with $FunctionalFamilyOverride<FutureOr<String?>, int> {
@@ -268,8 +268,8 @@ final class TripFirstImageFamily extends $Family
         isAutoDispose: true,
       );
 
-  /// 특정 여행 ID(tripId)에 등록된 이미지 목록 중 첫 번째 이미지 경로를 반환하는 함수형 프로바이더
-  /// ✨ 특정 여행 ID(tripId)의 DB를 직접 조회하여 등록된 이미지 중 첫 번째 이미지 경로를 반환합니다.
+  /// 특정 여행 ID(tripId)에 등록된 대표 이미지 경로를 반환하는 함수형 프로바이더
+  /// ✨ coverImagePath → 없으면 첫 번째 comment.path 순으로 폴백
 
   TripFirstImageProvider call(int tripId) =>
       TripFirstImageProvider._(argument: tripId, from: this);

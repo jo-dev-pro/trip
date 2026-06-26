@@ -53,29 +53,6 @@ class DetailScreen extends ConsumerWidget {
 
         return Scaffold(
           backgroundColor: const Color(0xFFF4F6FA),
-          floatingActionButton: FloatingActionButton.extended(
-            onPressed: () {
-              // 💡 [수정 완료]: 데이터가 완벽히 일치하므로 가공 없이 데이터 통째로 토스합니다.
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => EditScreen(
-                    tripState: data, // 복잡한 재생성 로직 제거하고 단일 데이터 바인딩
-                  ),
-                ),
-              );
-            },
-            backgroundColor: Colors.indigo.shade700,
-            foregroundColor: Colors.white,
-            icon: const Icon(Icons.edit_rounded, size: 20),
-            label: const Text(
-              '수정하기',
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                letterSpacing: -0.5,
-              ),
-            ),
-          ),
           body: CustomScrollView(
             slivers: [
               // ─── 상단 앱바 ───
@@ -85,6 +62,30 @@ class DetailScreen extends ConsumerWidget {
                 backgroundColor: Colors.indigo.shade700,
                 foregroundColor: Colors.white,
                 elevation: 0,
+                actions: [
+                  Padding(
+                    padding: const EdgeInsets.only(right: 12),
+                    child: TextButton.icon(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => EditScreen(tripState: data),
+                          ),
+                        );
+                      },
+                      icon: const Icon(Icons.edit_rounded, color: Colors.white, size: 18),
+                      label: const Text(
+                        '수정',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
                 flexibleSpace: FlexibleSpaceBar(
                   titlePadding: const EdgeInsets.only(
                     left: 52,
@@ -389,110 +390,32 @@ class DetailScreen extends ConsumerWidget {
                 ),
 
               // ─── 사진 그리드 배치 ───
+              // 💡 [수정 1] SliverGrid 대신 SliverList + 2열 Row로 구성
+              //    → 코멘트 텍스트 높이가 가변이어도 잘리지 않음
               if (hasImages)
                 SliverPadding(
                   padding: const EdgeInsets.symmetric(horizontal: 20.0),
-                  sliver: SliverGrid(
-                    gridDelegate:
-                        const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 2,
-                          mainAxisSpacing: 12.0,
-                          crossAxisSpacing: 12.0,
-                          childAspectRatio: 0.82,
-                        ),
-                    delegate: SliverChildBuilderDelegate((context, index) {
-                      final item = comments[index];
-
-                      return GestureDetector(
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            PageRouteBuilder(
-                              opaque: false,
-                              barrierDismissible: true,
-                              pageBuilder:
-                                  (context, animation, secondaryAnimation) {
-                                    return ImageCommentViewer(
-                                      imageComments: comments,
-                                      initialIndex: index,
-                                    );
-                                  },
-                              transitionsBuilder:
-                                  (
-                                    context,
-                                    animation,
-                                    secondaryAnimation,
-                                    child,
-                                  ) {
-                                    return FadeTransition(
-                                      opacity: animation,
-                                      child: child,
-                                    );
-                                  },
-                            ),
-                          );
-                        },
-                        child: Container(
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(14),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.04),
-                                blurRadius: 6,
-                                offset: const Offset(0, 2),
-                              ),
-                            ],
-                          ),
-                          child: Column(
+                  sliver: SliverList(
+                    delegate: SliverChildBuilderDelegate(
+                      (context, rowIndex) {
+                        final leftIndex = rowIndex * 2;
+                        final rightIndex = leftIndex + 1;
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 12),
+                          child: Row(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Expanded(
-                                flex: 3,
-                                child: ClipRRect(
-                                  borderRadius: const BorderRadius.vertical(
-                                    top: Radius.circular(14),
-                                  ),
-                                  child: Image.file(
-                                    File(item.path),
-                                    width: double.infinity,
-                                    fit: BoxFit.cover,
-                                    errorBuilder:
-                                        (context, error, stackTrace) =>
-                                            Container(
-                                              color: Colors.grey[200],
-                                              child: const Icon(
-                                                Icons.broken_image,
-                                                color: Colors.grey,
-                                              ),
-                                            ),
-                                  ),
-                                ),
-                              ),
-                              Expanded(
-                                flex: 1,
-                                child: Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 10.0,
-                                    vertical: 8.0,
-                                  ),
-                                  child: Text(
-                                    item.comment,
-                                    maxLines: 2,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(
-                                      fontSize: 12,
-                                      color: Colors.black87,
-                                      height: 1.3,
-                                    ),
-                                  ),
-                                ),
-                              ),
+                              Expanded(child: _buildImageCard(context, comments, leftIndex)),
+                              const SizedBox(width: 12),
+                              rightIndex < comments.length
+                                  ? Expanded(child: _buildImageCard(context, comments, rightIndex))
+                                  : const Expanded(child: SizedBox()),
                             ],
                           ),
-                        ),
-                      );
-                    }, childCount: comments.length),
+                        );
+                      },
+                      childCount: (comments.length / 2).ceil(),
+                    ),
                   ),
                 ),
 
@@ -501,6 +424,74 @@ class DetailScreen extends ConsumerWidget {
           ),
         );
       },
+    );
+  }
+
+  // ─── 이미지 카드 빌더 (코멘트 잘림 해결: 고정 이미지 높이 + 가변 텍스트) ───
+  Widget _buildImageCard(BuildContext context, List<TripCommentModel> comments, int index) {
+    final item = comments[index];
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          PageRouteBuilder(
+            opaque: false,
+            barrierDismissible: true,
+            pageBuilder: (context, animation, secondaryAnimation) =>
+                ImageCommentViewer(imageComments: comments, initialIndex: index),
+            transitionsBuilder: (context, animation, secondaryAnimation, child) =>
+                FadeTransition(opacity: animation, child: child),
+          ),
+        );
+      },
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(14),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.04),
+              blurRadius: 6,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min, // 💡 높이를 컨텐츠에 맞게 자동 조절
+          children: [
+            // 이미지 영역: 고정 높이
+            ClipRRect(
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(14)),
+              child: SizedBox(
+                height: 140,
+                width: double.infinity,
+                child: Image.file(
+                  File(item.path),
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) => Container(
+                    color: Colors.grey[200],
+                    child: const Icon(Icons.broken_image, color: Colors.grey),
+                  ),
+                ),
+              ),
+            ),
+            // 💡 코멘트 영역: 고정 높이 제거 → 텍스트 길이에 따라 자연스럽게 늘어남
+            if (item.comment.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 10.0, vertical: 8.0),
+                child: Text(
+                  item.comment,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: Colors.black87,
+                    height: 1.4,
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
     );
   }
 }

@@ -44,11 +44,14 @@ class TripList extends _$TripList {
 class TripFormNotifier extends _$TripFormNotifier {
   final _repository = TripRepository();
   List<TripCommentModel> _currentImages = [];
+  String? _coverImagePath; // 💡 대표 이미지 경로
   List<TripCommentModel> get currentImages => _currentImages;
+  String? get coverImagePath => _coverImagePath;
 
   @override
   AsyncValue<TripFormState> build() {
-    _currentImages = []; 
+    _currentImages = [];
+    _coverImagePath = null;
     return AsyncData(TripFormState(
       trip: TripModel(id: null, title: '', place: '', note: ''),
       dailyNotes: [],
@@ -126,6 +129,12 @@ class TripFormNotifier extends _$TripFormNotifier {
     for (final file in pickedFiles) { await addImageFromGallery(file); }
   }
 
+  /// 💡 대표 이미지 지정/해제
+  void setCoverImage(String? path) {
+    _coverImagePath = path;
+    state = AsyncData(_currentState.copyWith(trip: _currentModel.copyWith()));
+  }
+
   void removeImage(int index) {
     if (index < 0 || index >= _currentImages.length) return;
     
@@ -200,6 +209,8 @@ class TripFormNotifier extends _$TripFormNotifier {
         title: trimmedTitle, 
         place: trimmedPlace, 
         note: trimmedNote,
+        // 💡 대표 이미지: 현재 등록된 이미지 중 coverImagePath가 지정된 것 우선, 없으면 첫 번째
+        coverImagePath: _coverImagePath ?? (_currentImages.isNotEmpty ? _currentImages.first.path : null),
       );
 
       int savedTripId;
@@ -224,9 +235,14 @@ class TripFormNotifier extends _$TripFormNotifier {
         );
       }
 
-      // 상태 전파 및 캐시 무효화로 새로고침 유도
-      ref.read(tripListProvider.notifier).refresh();
+// 💡 [추가 포인트 3]: 무효화(invalidate) 순서 정돈 및 디테일 새로고침 강제화
+      // 1. 리스트 화면 프로바이더 무효화
+      ref.invalidate(tripListProvider);
+
+      // 2. 디테일 화면 프로바이더 무효화 및 즉시 새 데이터 로드 대기
       ref.invalidate(tripDetailProvider(savedTripId));
+      // 디테일 화면이 즉시 리빌드되도록 확실히 하기 위해 read 호출로 한 번 깨워줍니다.
+      await ref.read(tripDetailProvider(savedTripId).future);
 
       // 💡 최종 상태 역시 TripFormState 구조에 맞추어 갱신해 줍니다.
       state = AsyncData(TripFormState(
@@ -241,9 +257,7 @@ class TripFormNotifier extends _$TripFormNotifier {
   // ──────────── 💡 수정화면 진입 시 기존 데이터 세팅 ────────────
   void setTravel(TripModel travel, List<TripCommentModel> comments, List<DailyNoteModel> dailyNotes) {
     _currentImages = comments;
-    
-    // 💡 수정화면에 들어올 때 '여행 정보'와 '이미지 코멘트'뿐만 아니라 
-    // DB에서 기존에 작성했던 '일차별 메모(dailyNotes)'까지 함께 받아서 상태에 채워 넣어 줍니다.
+    _coverImagePath = travel.coverImagePath; // 💡 기존 대표 이미지 복원
     state = AsyncData(TripFormState(
       trip: travel,
       dailyNotes: dailyNotes,
@@ -324,24 +338,21 @@ class TripDetail extends _$TripDetail {
   }
 }
 
-/// 특정 여행 ID(tripId)에 등록된 이미지 목록 중 첫 번째 이미지 경로를 반환하는 함수형 프로바이더
-/// ✨ 특정 여행 ID(tripId)의 DB를 직접 조회하여 등록된 이미지 중 첫 번째 이미지 경로를 반환합니다.
+/// 특정 여행 ID(tripId)에 등록된 대표 이미지 경로를 반환하는 함수형 프로바이더
+/// ✨ coverImagePath → 없으면 첫 번째 comment.path 순으로 폴백
 @riverpod
 Future<String?> tripFirstImage(Ref ref, int tripId) async {
   final repository = TripRepository();
-  
   try {
-    // 1. 해당 여행 ID에 매핑된 전체 댓글/이미지 데이터를 DB에서 가져옵니다.
-    final comments = await repository.getCommentsByTrip(tripId);
-    
-    // 2. 등록된 이미지가 있다면 첫 번째 이미지의 path를 반환하고, 없으면 null을 반환합니다.
-    if (comments.isNotEmpty) {
-      return comments.first.path; 
+    final trip = await repository.getTripById(tripId);
+    if (trip?.coverImagePath != null && trip!.coverImagePath!.isNotEmpty) {
+      return trip.coverImagePath;
     }
+    // 대표 이미지 미설정 시 첫 번째 이미지로 폴백
+    final comments = await repository.getCommentsByTrip(tripId);
+    if (comments.isNotEmpty) return comments.first.path;
   } catch (e) {
-    // 에러 발생 시 디버그 콘솔에서 확인할 수 있도록 로그를 남깁니다.
     print('❌ [tripFirstImage] DB 조회 실패 (tripId: $tripId): $e');
   }
-  
   return null;
 }
