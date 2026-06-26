@@ -92,9 +92,11 @@ flutter:
     - assets/map.png
 
   fonts:
-    - family: NanumGothic
+    - family: NotoSansKR
       fonts:
-        - asset: assets/fonts/nanum/NanumGothic.otf
-          weight: 300
-        - asset: assets/fonts/nanum/NanumGothicBold.otf
-          weight: 600
+        - asset: assets/fonts/NotoSansKR-Regular.ttf
+          weight: 400
+        - asset: assets/fonts/NotoSansKR-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/NotoSansKR-Bold.ttf
+          weight: 700
