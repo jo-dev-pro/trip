@@ -47,9 +47,7 @@ class _ImagePickerSheetState extends ConsumerState<ImagePickerSheet> {
     }
 
     // 💡 변경: 기존 createNotifier 대신 새롭게 설계한 tripFormNotifier를 트리거합니다.
-    await ref
-        .read(tripFormProvider.notifier)
-        .addImagesFromGallery(selected);
+    await ref.read(tripFormProvider.notifier).addImagesFromGallery(selected);
 
     if (mounted) Navigator.pop(context);
   }
@@ -79,7 +77,12 @@ class _ImagePickerSheetState extends ConsumerState<ImagePickerSheet> {
             ),
             // 헤더 영역
             Padding(
-              padding: const EdgeInsets.only(top:4, bottom: 4, left: 16, right: 10),
+              padding: const EdgeInsets.only(
+                top: 4,
+                bottom: 4,
+                left: 16,
+                right: 10,
+              ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -101,10 +104,6 @@ class _ImagePickerSheetState extends ConsumerState<ImagePickerSheet> {
                         ),
                       ),
                       if (_selectedIndexes.isNotEmpty) ...[
-<<<<<<< HEAD
-=======
-                        // const SizedBox(width: 8),
->>>>>>> 55523d54b2afbff8f30474235795e0c15d6c616a
                         ElevatedButton(
                           onPressed: _confirmSelection,
                           style: ElevatedButton.styleFrom(
@@ -185,7 +184,7 @@ class _ImagePickerSheetState extends ConsumerState<ImagePickerSheet> {
                                 child: Image.file(
                                   File(_galleryImages[i].path),
                                   fit: BoxFit.cover,
-                                  cacheWidth: 300,   // 💡 썸네일 크기로 디코딩 → 메모리/속도 개선
+                                  cacheWidth: 300, // 💡 썸네일 크기로 디코딩 → 메모리/속도 개선
                                   cacheHeight: 300,
                                 ),
                               ),
