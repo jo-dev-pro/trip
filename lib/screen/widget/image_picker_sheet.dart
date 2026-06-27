@@ -77,57 +77,54 @@ class _ImagePickerSheetState extends ConsumerState<ImagePickerSheet> {
             ),
             // 헤더 영역
             Padding(
-              padding: const EdgeInsets.only(
-                top: 4,
-                bottom: 4,
-                left: 16,
-                right: 10,
-              ),
+              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
               child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
-                    '사진 선택',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.indigo.shade800,
+                  // 💡 닫기 버튼 (왼쪽 고정)
+                  IconButton(
+                    icon: Icon(Icons.close, color: Colors.grey.shade600),
+                    onPressed: () => Navigator.pop(context),
+                    tooltip: '닫기',
+                  ),
+                  // 제목 (남은 공간 차지)
+                  Expanded(
+                    child: Text(
+                      '사진 선택',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.indigo.shade800,
+                      ),
+                      textAlign: TextAlign.center,
                     ),
                   ),
-                  Row(
-                    children: [
-                      TextButton(
-                        onPressed: _pickFromGallery,
-                        child: Text(
-                          '갤러리열기 ',
-                          style: TextStyle(color: Colors.indigo.shade600),
-                        ),
-                      ),
-                      if (_selectedIndexes.isNotEmpty) ...[
-                        ElevatedButton(
-                          onPressed: _confirmSelection,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.indigo.shade700,
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 8,
-                            ),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                          ),
-                          child: Text('선택 완료 (${_selectedIndexes.length})'),
-                        ),
-                      ],
-                      // 💡 닫기 버튼 (실수로 닫히지 않도록 명시적 버튼으로만 닫기)
-                      IconButton(
-                        icon: Icon(Icons.close, color: Colors.grey.shade600),
-                        onPressed: () => Navigator.pop(context),
-                        tooltip: '닫기',
-                      ),
-                    ],
+                  // 갤러리 열기 + 선택완료 (오른쪽)
+                  TextButton(
+                    onPressed: _pickFromGallery,
+                    child: Text(
+                      '갤러리',
+                      style: TextStyle(color: Colors.indigo.shade600),
+                    ),
                   ),
+                  if (_selectedIndexes.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: ElevatedButton(
+                        onPressed: _confirmSelection,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.indigo.shade700,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 8,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                        child: Text('완료 (${_selectedIndexes.length})'),
+                      ),
+                    ),
                 ],
               ),
             ),
