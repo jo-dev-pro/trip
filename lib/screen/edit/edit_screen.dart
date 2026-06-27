@@ -25,8 +25,6 @@ class _EditScreenState extends ConsumerState<EditScreen> {
   final _placeCtrl = TextEditingController();
   final _titleCtrl = TextEditingController();
   final _noteCtrl = TextEditingController();
-
-  // 일자별 테마 수정을 위한 컨트롤러 리스트
   final List<TextEditingController> _themeCtrls = [];
 
   @override
@@ -55,15 +53,12 @@ class _EditScreenState extends ConsumerState<EditScreen> {
     final comments = widget.tripState.comments;
     final dailyNotes = widget.tripState.dailyNotes;
 
-    // 💡 [수정]: 2번 대안 아키텍처 명세에 맞게 dailyNotes까지 포함해 3가지 데이터 팩을 전송합니다.
     ref.read(tripFormProvider.notifier).setTravel(trip, comments, dailyNotes);
 
-    // 기본 입력 필드 데이터 동기화
     _titleCtrl.text = trip.title;
     _placeCtrl.text = trip.place;
     _noteCtrl.text = trip.note ?? '';
 
-    // DailyNoteModel 기반 일자별 핵심 테마 매핑
     _themeCtrls.clear();
 
     if (trip.startDate != null && trip.endDate != null) {
@@ -71,34 +66,27 @@ class _EditScreenState extends ConsumerState<EditScreen> {
 
       for (int i = 0; i < days; i++) {
         final currentDay = i + 1;
-
         final matchedNote = dailyNotes.firstWhere(
           (note) => note.dayCount == currentDay,
           orElse: () => DailyNoteModel(comment: ''),
         );
-
         _themeCtrls.add(TextEditingController(text: matchedNote.comment));
       }
 
-      if (mounted) {
-        setState(() {});
-      }
+      if (mounted) setState(() {});
     }
   }
 
   void _pickDate({required bool isStart}) async {
-    // 💡 [수정]: formState의 value값은 이제 TripFormState 객체이므로 알맹이를 한 단계 벗겨냅니다.
     final formValue = ref.read(tripFormProvider).value;
     if (formValue == null) return;
 
     final tripModel = formValue.trip;
     if (tripModel.startDate == null || tripModel.endDate == null) return;
 
-    // 기존의 총 일수 계산
     final originalDays =
         tripModel.endDate!.difference(tripModel.startDate!).inDays + 1;
 
-    // 1. 달력 띄우기
     final picked = await showDatePicker(
       context: context,
       initialDate: isStart ? tripModel.startDate! : tripModel.endDate!,
@@ -107,12 +95,10 @@ class _EditScreenState extends ConsumerState<EditScreen> {
     );
     if (picked == null) return;
 
-    // 2. 가상의 새로운 일수 계산해보기
     final newStart = isStart ? picked : tripModel.startDate!;
     final newEnd = isStart ? tripModel.endDate! : picked;
     final newDays = newEnd.difference(newStart).inDays + 1;
 
-    // 역전 현상 방지
     if (newDays <= 0) {
       if (mounted) {
         ScaffoldMessenger.of(
@@ -122,11 +108,8 @@ class _EditScreenState extends ConsumerState<EditScreen> {
       return;
     }
 
-    // 3. 만약 기간이 줄어들었다면 경고 팝업 노출
     if (newDays < originalDays) {
-      // 💡 빌드 컨텍스트 사용 전 안전하게 mounted 체크를 넣어주는 것이 좋습니다.
       if (!mounted) return;
-      
       final bool? confirm = await showDialog<bool>(
         context: context,
         builder: (ctx) => AlertDialog(
@@ -158,11 +141,9 @@ class _EditScreenState extends ConsumerState<EditScreen> {
           ],
         ),
       );
-
       if (confirm != true) return;
     }
 
-    // 4. 검증을 통과했거나 기간이 줄어들지 않았다면 프로바이더 상태 업데이트
     final notifier = ref.read(tripFormProvider.notifier);
     if (isStart) {
       notifier.updateStartDate(picked);
@@ -187,9 +168,7 @@ class _EditScreenState extends ConsumerState<EditScreen> {
       }
     }
 
-    if (mounted) {
-      setState(() {});
-    }
+    if (mounted) setState(() {});
   }
 
   Future<void> _onUpdate() async {
@@ -197,9 +176,6 @@ class _EditScreenState extends ConsumerState<EditScreen> {
     if (!_formKey.currentState!.validate()) return;
 
     final notifier = ref.read(tripFormProvider.notifier);
-
-    // 💡 [수정]: 이제는 프로바이더 내부의 dailyNotes 상태창에 이미 실시간 동기화가 이루어지므로,
-    // 불필요했던 외부 매개변수 'themes: updatedThemes' 부분을 걷어내고 순수 저장 정보만 쏘아 올립니다.
     await notifier.save(
       title: _titleCtrl.text.trim(),
       place: _placeCtrl.text.trim(),
@@ -209,20 +185,20 @@ class _EditScreenState extends ConsumerState<EditScreen> {
     if (mounted) {
       final tripId = widget.tripState.trip.id;
       if (tripId != null) {
-        // 💡 디테일 화면 프로바이더(tripDetailProvider)의 캐시를 무효화하여 
-        // 이전 화면으로 돌아갔을 때 새롭게 수정된 DB 데이터를 다시 긁어오도록 트리거를 당깁니다.
         ref.invalidate(tripDetailProvider(tripId));
       }
-      
       Navigator.of(context).pop();
     }
   }
 
+  // 💡 isDismissible/enableDrag false → 실수로 닫히지 않게
   void _showImageBottomSheet() {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
+      isDismissible: false,
+      enableDrag: false,
       builder: (_) => const ImagePickerSheet(),
     );
   }
@@ -260,9 +236,7 @@ class _EditScreenState extends ConsumerState<EditScreen> {
 
     try {
       await ref.read(tripListProvider.notifier).deleteTrip(tripId);
-
       if (!mounted) return;
-
       ref.read(tripListProvider.notifier).refresh();
       Navigator.of(context).popUntil((route) => route.isFirst);
     } catch (e) {
@@ -278,7 +252,6 @@ class _EditScreenState extends ConsumerState<EditScreen> {
     final formState = ref.watch(tripFormProvider);
     final notifier = ref.read(tripFormProvider.notifier);
 
-    // 💡 [수정]: data 수급 단에서 TripFormState 매핑 가공 처리 진행
     return formState.when(
       loading: () =>
           const Scaffold(body: Center(child: CircularProgressIndicator())),
@@ -286,7 +259,7 @@ class _EditScreenState extends ConsumerState<EditScreen> {
       data: (formValue) {
         final isSaving = formState.isLoading;
         final currentImages = notifier.currentImages;
-        final model = formValue.trip; // 👈 순수 데이터 모델만 디커플링 추출
+        final model = formValue.trip;
 
         return Scaffold(
           backgroundColor: const Color(0xFFF4F6FA),
@@ -367,7 +340,7 @@ class _EditScreenState extends ConsumerState<EditScreen> {
                         Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 12),
                           child: Text(
-                            '~', // 💡 요렇게 따옴표로 감싸서 문자열(String)로 만들어 줍니다!
+                            '~',
                             style: TextStyle(
                               fontSize: 20,
                               color: Colors.indigo.shade700,
@@ -439,8 +412,6 @@ class _EditScreenState extends ConsumerState<EditScreen> {
                                         ),
                                       ),
                                     ),
-                                    // 💡 [수정 포인트]: 텍스트 입력 칸의 글자가 바뀔 때마다
-                                    // Notifier의 내부 상태창에 실시간으로 매핑 싱크를 시켜 버그를 원천 차단합니다.
                                     onChanged: (value) {
                                       notifier.updateDailyNoteComment(
                                         currentDay,
@@ -505,10 +476,13 @@ class _EditScreenState extends ConsumerState<EditScreen> {
                       ],
                     ),
                     if (currentImages.isNotEmpty) ...[
+                      // 💡 coverImagePath + onCoverImageChanged 연결
                       ImageGrid(
                         images: currentImages,
                         onRemove: notifier.removeImage,
                         onCommentChanged: notifier.updateImageComment,
+                        coverImagePath: notifier.coverImagePath,
+                        onCoverImageChanged: notifier.setCoverImage,
                       ),
                     ] else
                       Container(
