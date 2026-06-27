@@ -228,8 +228,8 @@ class HomeScreen extends ConsumerWidget {
                             ),
                             decoration: BoxDecoration(
                               color: isPast
-                                  ? Colors.grey.shade200
-                                  : Colors.indigo.shade50,
+                                  ? Colors.indigo.shade100
+                                  : Colors.indigo.shade100,
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: Text(
@@ -238,7 +238,7 @@ class HomeScreen extends ConsumerWidget {
                                 fontSize: 12,
                                 fontWeight: FontWeight.bold,
                                 color: isPast
-                                    ? Colors.grey.shade700
+                                    ? Colors.indigo.shade700
                                     : Colors.indigo.shade700,
                               ),
                             ),
@@ -304,6 +304,7 @@ class HomeScreen extends ConsumerWidget {
                     ],
                   ),
                 ),
+                SizedBox(height: 30),
               ],
             ),
           ),
