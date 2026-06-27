@@ -193,121 +193,126 @@ class HomeScreen extends ConsumerWidget {
           }
         }
 
-        return Card(
-          margin: const EdgeInsets.only(bottom: 16),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-          elevation: 0.5,
-          clipBehavior: Clip.antiAlias,
-          child: InkWell(
-            onTap: () {
-              context.pushNamed(JRoutes.detail, extra: trip.id);
-            },
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // ── 💡 대표 이미지 표시 구역 ──
-                // 현재 구조상 TripModel 내부에 이미지가 없으므로,
-                // 이미지 로드가 완료되기 전까지는 우선 일관성 있게 에러 빌더(아이콘)나 플레이스홀더를 보여줍니다.
-                // ※ 추후 특정 trip.id에 대응하는 첫 번째 comment.path를 불러오는 프로바이더를 연동하면 완벽합니다.
-                _buildMainImage(trip.id),
+        return Column(
+          children: [
+            Card(
+              margin: const EdgeInsets.only(bottom: 16),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              elevation: 0.5,
+              clipBehavior: Clip.antiAlias,
+              child: InkWell(
+                onTap: () {
+                  context.pushNamed(JRoutes.detail, extra: trip.id);
+                },
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // ── 💡 대표 이미지 표시 구역 ──
+                    // 현재 구조상 TripModel 내부에 이미지가 없으므로,
+                    // 이미지 로드가 완료되기 전까지는 우선 일관성 있게 에러 빌더(아이콘)나 플레이스홀더를 보여줍니다.
+                    // ※ 추후 특정 trip.id에 대응하는 첫 번째 comment.path를 불러오는 프로바이더를 연동하면 완벽합니다.
+                    _buildMainImage(trip.id),
 
-                Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 10,
-                              vertical: 4,
-                            ),
-                            decoration: BoxDecoration(
-                              color: isPast
-                                  ? Colors.indigo.shade100
-                                  : Colors.indigo.shade100,
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Text(
-                              trip.place,
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
-                                color: isPast
-                                    ? Colors.indigo.shade700
-                                    : Colors.indigo.shade700,
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 10,
+                                  vertical: 4,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: isPast
+                                      ? Colors.indigo.shade100
+                                      : Colors.indigo.shade100,
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Text(
+                                  trip.place,
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                    color: isPast
+                                        ? Colors.indigo.shade700
+                                        : Colors.indigo.shade700,
+                                  ),
+                                ),
                               ),
-                            ),
+                              if (!isPast)
+                                Text(
+                                  dDayStr,
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.bold,
+                                    color:
+                                        dDayStr == 'D-Day' || dDayStr == '여행 중'
+                                        ? Colors.red.shade600
+                                        : Colors.indigo.shade700,
+                                  ),
+                                ),
+                            ],
                           ),
-                          if (!isPast)
-                            Text(
-                              dDayStr,
-                              style: TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.bold,
-                                color: dDayStr == 'D-Day' || dDayStr == '여행 중'
-                                    ? Colors.red.shade600
-                                    : Colors.indigo.shade700,
-                              ),
+                          const SizedBox(height: 12),
+                          Text(
+                            trip.title,
+                            style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF1A1A1A),
                             ),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-                      Text(
-                        trip.title,
-                        style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF1A1A1A),
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      const SizedBox(height: 6),
-                      if (startStr.isNotEmpty && endStr.isNotEmpty)
-                        Row(
-                          children: [
-                            Icon(
-                              Icons.calendar_today_outlined,
-                              size: 14,
-                              color: Colors.grey.shade500,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          const SizedBox(height: 6),
+                          if (startStr.isNotEmpty && endStr.isNotEmpty)
+                            Row(
+                              children: [
+                                Icon(
+                                  Icons.calendar_today_outlined,
+                                  size: 14,
+                                  color: Colors.grey.shade500,
+                                ),
+                                const SizedBox(width: 6),
+                                Text(
+                                  '$startStr ~ $endStr',
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    color: Colors.grey.shade600,
+                                  ),
+                                ),
+                              ],
                             ),
-                            const SizedBox(width: 6),
+                          if (trip.note != null && trip.note!.isNotEmpty) ...[
+                            const SizedBox(height: 12),
+                            Divider(color: Colors.grey.shade100, height: 1),
+                            const SizedBox(height: 12),
                             Text(
-                              '$startStr ~ $endStr',
+                              trip.note!,
                               style: TextStyle(
                                 fontSize: 13,
-                                color: Colors.grey.shade600,
+                                color: Colors.grey.shade500,
+                                height: 1.4,
                               ),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ],
-                        ),
-                      if (trip.note != null && trip.note!.isNotEmpty) ...[
-                        const SizedBox(height: 12),
-                        Divider(color: Colors.grey.shade100, height: 1),
-                        const SizedBox(height: 12),
-                        Text(
-                          trip.note!,
-                          style: TextStyle(
-                            fontSize: 13,
-                            color: Colors.grey.shade500,
-                            height: 1.4,
-                          ),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ],
-                    ],
-                  ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
-                SizedBox(height: 30),
-              ],
+              ),
             ),
-          ),
+            SizedBox(height: 30),
+          ],
         );
       },
     );
