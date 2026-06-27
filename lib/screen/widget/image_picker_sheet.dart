@@ -14,29 +14,47 @@ class ImagePickerSheet extends ConsumerStatefulWidget {
 class _ImagePickerSheetState extends ConsumerState<ImagePickerSheet> {
   List<XFile> _galleryImages = [];
   final Set<int> _selectedIndexes = {};
-  bool _loading = false;
+  bool _loading = false; // 갤러리 picker 대기 중
+  bool _rendering = false; // 💡 이미지 그리드 렌더링 중
 
   @override
   void initState() {
     super.initState();
-    _loadGallery();
-  }
-
-  Future<void> _loadGallery() async {
-    setState(() => _loading = true);
-    // photo_manager 미사용 시, 진입하자마자 갤러리를 자동으로 열어주는 흐름도 좋습니다.
-    setState(() => _loading = false);
   }
 
   Future<void> _pickFromGallery() async {
     final picker = ImagePicker();
     final picked = await picker.pickMultiImage(imageQuality: 85);
-    if (picked.isNotEmpty) {
-      setState(() {
-        _galleryImages = picked;
-        _selectedIndexes.clear();
-      });
-    }
+    if (picked.isEmpty) return;
+
+    // 💡 갤러리에서 선택 완료 → 렌더링 시작 전 로딩 표시
+    setState(() {
+      _loading = true;
+      _rendering = true;
+    });
+
+    // 다음 프레임에 이미지 목록 세팅 → UI가 로딩 인디케이터를 먼저 그린 뒤 이미지 로드
+    await Future.microtask(() {
+      if (mounted) {
+        setState(() {
+          _galleryImages = picked;
+          _selectedIndexes.clear();
+          _loading = false; // 목록은 세팅됐지만 렌더링은 아직
+        });
+      }
+    });
+
+    // 💡 이미지가 실제로 화면에 그려진 뒤 렌더링 완료 처리
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) setState(() => _rendering = false);
+    });
+  }
+
+  // 💡 전체 선택
+  void _selectAll() {
+    setState(() {
+      _selectedIndexes.addAll(List.generate(_galleryImages.length, (i) => i));
+    });
   }
 
   Future<void> _confirmSelection() async {
@@ -45,12 +63,14 @@ class _ImagePickerSheetState extends ConsumerState<ImagePickerSheet> {
       Navigator.pop(context);
       return;
     }
-
-    // 💡 변경: 기존 createNotifier 대신 새롭게 설계한 tripFormNotifier를 트리거합니다.
     await ref.read(tripFormProvider.notifier).addImagesFromGallery(selected);
-
     if (mounted) Navigator.pop(context);
   }
+
+  // 전체선택 여부
+  bool get _isAllSelected =>
+      _galleryImages.isNotEmpty &&
+      _selectedIndexes.length == _galleryImages.length;
 
   @override
   Widget build(BuildContext context) {
@@ -75,18 +95,18 @@ class _ImagePickerSheetState extends ConsumerState<ImagePickerSheet> {
                 borderRadius: BorderRadius.circular(4),
               ),
             ),
-            // 헤더 영역
+            // 헤더
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
               child: Row(
                 children: [
-                  // 💡 닫기 버튼 (왼쪽 고정)
+                  // 닫기
                   IconButton(
                     icon: Icon(Icons.close, color: Colors.grey.shade600),
                     onPressed: () => Navigator.pop(context),
                     tooltip: '닫기',
                   ),
-                  // 제목 (남은 공간 차지)
+                  // 제목
                   Expanded(
                     child: Text(
                       '사진 선택',
@@ -98,15 +118,32 @@ class _ImagePickerSheetState extends ConsumerState<ImagePickerSheet> {
                       textAlign: TextAlign.center,
                     ),
                   ),
-                  // 갤러리 열기 + 선택완료 (오른쪽)
+                  // 갤러리 열기
                   TextButton(
-                    onPressed: _pickFromGallery,
+                    onPressed: (_loading || _rendering)
+                        ? null
+                        : _pickFromGallery,
                     child: Text(
                       '갤러리',
                       style: TextStyle(color: Colors.indigo.shade600),
                     ),
                   ),
-                  if (_selectedIndexes.isNotEmpty)
+                  // 💡 전체선택: 이미지 있고 전체 미선택 상태일 때만 표시
+                  if (_galleryImages.isNotEmpty &&
+                      !_isAllSelected &&
+                      !_rendering)
+                    Padding(
+                      padding: const EdgeInsets.only(right: 4),
+                      child: TextButton(
+                        onPressed: _selectAll,
+                        child: Text(
+                          '전체선택',
+                          style: TextStyle(color: Colors.indigo.shade400),
+                        ),
+                      ),
+                    ),
+                  // 선택완료
+                  if (_selectedIndexes.isNotEmpty && !_rendering)
                     Padding(
                       padding: const EdgeInsets.only(right: 8),
                       child: ElevatedButton(
@@ -129,10 +166,28 @@ class _ImagePickerSheetState extends ConsumerState<ImagePickerSheet> {
               ),
             ),
             const Divider(height: 1),
-            // 이미지 그리드 목록 영역
+            // 본문
             Expanded(
-              child: _loading
-                  ? const Center(child: CircularProgressIndicator())
+              child: _loading || _rendering
+                  // 💡 갤러리 선택 후 이미지 로딩 중 → 인디케이터 + 안내 문구
+                  ? Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          CircularProgressIndicator(
+                            color: Colors.indigo.shade400,
+                          ),
+                          const SizedBox(height: 16),
+                          Text(
+                            '사진을 불러오는 중...',
+                            style: TextStyle(
+                              color: Colors.grey.shade500,
+                              fontSize: 14,
+                            ),
+                          ),
+                        ],
+                      ),
+                    )
                   : _galleryImages.isEmpty
                   ? Center(
                       child: Column(
@@ -181,7 +236,7 @@ class _ImagePickerSheetState extends ConsumerState<ImagePickerSheet> {
                                 child: Image.file(
                                   File(_galleryImages[i].path),
                                   fit: BoxFit.cover,
-                                  cacheWidth: 300, // 💡 썸네일 크기로 디코딩 → 메모리/속도 개선
+                                  cacheWidth: 300,
                                   cacheHeight: 300,
                                 ),
                               ),

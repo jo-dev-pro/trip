@@ -11,6 +11,8 @@ import 'package:trip/screen/widget/image_picker_sheet.dart';
 import 'package:trip/screen/widget/section_card.dart';
 import 'package:trip/screen/widget/styled_text_field.dart';
 
+import '../../common/util/loaders/loaders.dart';
+
 class CreateScreen extends ConsumerStatefulWidget {
   const CreateScreen({super.key});
 
@@ -64,8 +66,8 @@ class _CreateScreenState extends ConsumerState<CreateScreen> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      isDismissible: false,   // 💡 외부 터치로 닫히지 않게
-      enableDrag: false,      // 💡 드래그로 닫히지 않게
+      isDismissible: false, // 💡 외부 터치로 닫히지 않게
+      enableDrag: false, // 💡 드래그로 닫히지 않게
       builder: (_) => const ImagePickerSheet(),
     );
   }
@@ -104,10 +106,10 @@ class _CreateScreenState extends ConsumerState<CreateScreen> {
   Widget build(BuildContext context) {
     final formState = ref.watch(tripFormProvider);
     final notifier = ref.read(tripFormProvider.notifier);
-    
+
     // ✨ 1. 뼈대가 되는 가상 데이터 확인 (notifier 내부 변수 보다는 상태 기반 수급 권장)
     // 만약 상태(formState.value) 안에 이미지 리스트가 있다면 formState.value?.images 등으로 바꾸는 것이 가장 좋습니다.
-    final currentImages = notifier.currentImages; 
+    final currentImages = notifier.currentImages;
 
     final formValue = formState.value;
     final model = formValue?.trip;
@@ -117,20 +119,18 @@ class _CreateScreenState extends ConsumerState<CreateScreen> {
     // 리스너 설정
     ref.listen<AsyncValue<TripFormState>>(tripFormProvider, (prev, next) {
       if (prev is AsyncLoading && next is AsyncData) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('여행 일정이 성공적으로 등록되었습니다!'),
-            backgroundColor: Colors.indigo,
-          ),
+        JLoaders.successSnackBar(
+          context,
+          title: '알림',
+          message: '여행 일정이 성공적으로 등록되었습니다!',
         );
         Navigator.of(context).pop();
       }
       if (next is AsyncError) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(next.error.toString()),
-            backgroundColor: Colors.red.shade700,
-          ),
+        JLoaders.errorSnackBar(
+          context,
+          title: '오류',
+          message: next.error.toString(),
         );
       }
     });
@@ -255,11 +255,16 @@ class _CreateScreenState extends ConsumerState<CreateScreen> {
                             final currentDay = noteItem.dayCount ?? (index + 1);
 
                             return _DailyNoteInputRow(
-                              key: ValueKey('day_${currentDay}_${dailyNotes.length}'), // 키값 보강
+                              key: ValueKey(
+                                'day_${currentDay}_${dailyNotes.length}',
+                              ), // 키값 보강
                               currentDay: currentDay,
                               initialValue: noteItem.comment,
                               onChanged: (value) {
-                                notifier.updateDailyNoteComment(currentDay, value);
+                                notifier.updateDailyNoteComment(
+                                  currentDay,
+                                  value,
+                                );
                               },
                             );
                           },

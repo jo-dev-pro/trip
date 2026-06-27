@@ -11,7 +11,7 @@ import 'package:trip/provider/trip_provider.dart';
 import 'package:trip/screen/create/create_screen.dart';
 import 'package:trip/screen/home/widget/build_empty_state.dart';
 
-import '../../common/provider/onpop_invoked_provider.dart';
+import '../../common/widget/popscope.dart';
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
@@ -21,79 +21,84 @@ class HomeScreen extends ConsumerWidget {
     // 💡 프로바이더가 AsyncValue<List<TripModel>>을 반환하므로 타입을 일치시킵니다.
     final tripListAsync = ref.watch(tripListProvider);
 
-    return DefaultTabController(
-      length: 2,
-      child: Scaffold(
-        backgroundColor: const Color(0xFFF4F6FA),
-        appBar: AppBar(
-          backgroundColor: Colors.indigo.shade700,
-          foregroundColor: Colors.white,
-          title: const Text(
-            '나의 여행 다이어리',
-            style: TextStyle(fontWeight: FontWeight.bold),
-          ),
-          actions: [
-            // 새 일정 추가 버튼
-            TextButton.icon(
-              onPressed: () async {
-                ref.invalidate(tripFormProvider);
-                await Navigator.of(
-                  context,
-                ).push(MaterialPageRoute(builder: (_) => const CreateScreen()));
-                ref.read(tripListProvider.notifier).refresh();
-              },
-              icon: const Icon(
-                Icons.add_location_alt_outlined,
-                color: Colors.white,
-                size: 20,
-              ),
-              label: const Text(
-                '새 일정',
-                style: TextStyle(
+    return JPopScope(
+      child: DefaultTabController(
+        length: 2,
+        child: Scaffold(
+          backgroundColor: const Color(0xFFF4F6FA),
+          appBar: AppBar(
+            backgroundColor: Colors.indigo.shade700,
+            foregroundColor: Colors.white,
+            title: const Text(
+              '나의 여행 다이어리',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+            actions: [
+              // 새 일정 추가 버튼
+              TextButton.icon(
+                onPressed: () async {
+                  ref.invalidate(tripFormProvider);
+                  await Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const CreateScreen()),
+                  );
+                  ref.read(tripListProvider.notifier).refresh();
+                },
+                icon: const Icon(
+                  Icons.add_location_alt_outlined,
                   color: Colors.white,
-                  fontWeight: FontWeight.bold,
+                  size: 20,
+                ),
+                label: const Text(
+                  '새 일정',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
-            ),
-            // 기존 백업 버튼
-            GestureDetector(
-              child: CircleAvatar(
-                backgroundColor: Colors.grey.withValues(alpha: 0.8),
-                radius: 20,
-                child: Icon(
-                  Icons.settings_backup_restore_outlined,
-                  color: Colors.indigo.shade800,
-                  size: 22,
+              // 기존 백업 버튼
+              GestureDetector(
+                child: CircleAvatar(
+                  backgroundColor: Colors.grey.withValues(alpha: 0.8),
+                  radius: 20,
+                  child: Icon(
+                    Icons.settings_backup_restore_outlined,
+                    color: Colors.indigo.shade800,
+                    size: 22,
+                  ),
                 ),
+                onTap: () => context.pushNamed(JRoutes.backup),
               ),
-              onTap: () => context.pushNamed(JRoutes.backup),
-            ),
-            const SizedBox(width: 10),
-          ],
-          elevation: 0,
-          bottom: const TabBar(
-            labelColor: Colors.white,
-            unselectedLabelColor: Colors.white70,
-            indicatorColor: Colors.white,
-            indicatorWeight: 3,
-            labelStyle: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
-            tabs: [
-              Tab(text: '다가오는 여행'),
-              Tab(text: '지난 추억'),
+              const SizedBox(width: 10),
             ],
+            elevation: 0,
+            bottom: const TabBar(
+              labelColor: Colors.white,
+              unselectedLabelColor: Colors.white70,
+              indicatorColor: Colors.white,
+              indicatorWeight: 3,
+              labelStyle: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+              tabs: [
+                Tab(text: '다가오는 여행'),
+                Tab(text: '지난 추억'),
+              ],
+            ),
           ),
-        ),
-        body: tripListAsync.when(
-          data: (list) {
-            if (list.isEmpty) {
-              return const BuildEmptyState();
-            }
-            // 💡 이제 List<TripModel> 타입이 정확히 맞아떨어집니다!
-            return _buildTabBarView(list);
-          },
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (err, stack) => Center(
-            child: Text('데이터를 불러오지 못했습니다:\n$err', textAlign: TextAlign.center),
+          body: tripListAsync.when(
+            data: (list) {
+              if (list.isEmpty) {
+                return const BuildEmptyState();
+              }
+              // 💡 이제 List<TripModel> 타입이 정확히 맞아떨어집니다!
+              return _buildTabBarView(list);
+            },
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (err, stack) => Center(
+              child: Text(
+                '데이터를 불러오지 못했습니다:\n$err',
+                textAlign: TextAlign.center,
+              ),
+            ),
           ),
         ),
       ),
@@ -208,9 +213,7 @@ class HomeScreen extends ConsumerWidget {
                               vertical: 4,
                             ),
                             decoration: BoxDecoration(
-                              color: isPast
-                                  ? Colors.grey.shade200
-                                  : Colors.indigo.shade50,
+                              color: Colors.indigo.shade100,
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: Text(
@@ -218,9 +221,7 @@ class HomeScreen extends ConsumerWidget {
                               style: TextStyle(
                                 fontSize: 12,
                                 fontWeight: FontWeight.bold,
-                                color: isPast
-                                    ? Colors.grey.shade700
-                                    : Colors.indigo.shade700,
+                                color: Colors.indigo.shade700,
                               ),
                             ),
                           ),
