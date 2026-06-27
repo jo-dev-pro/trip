@@ -37,7 +37,11 @@ class DetailScreen extends ConsumerWidget {
             data.dailyNotes; // dynamic 대신 명확한 모델 타입 지정
 
         final hasImages = comments.isNotEmpty;
-        final String? firstImagePath = hasImages ? comments.first.path : null;
+        // 💡 대표 이미지 우선 → 없으면 첫 번째 이미지 → 없으면 null
+        final String? firstImagePath =
+            (trip.coverImagePath != null && trip.coverImagePath!.isNotEmpty)
+            ? trip.coverImagePath
+            : (hasImages ? comments.first.path : null);
 
         // 날짜가 누락되었을 경우를 대비한 가드 코드 포함
         final formattedStartDate = trip.startDate != null
@@ -74,7 +78,11 @@ class DetailScreen extends ConsumerWidget {
                           ),
                         );
                       },
-                      icon: const Icon(Icons.edit_rounded, color: Colors.white, size: 18),
+                      icon: const Icon(
+                        Icons.edit_rounded,
+                        color: Colors.white,
+                        size: 18,
+                      ),
                       label: const Text(
                         '수정',
                         style: TextStyle(
@@ -396,26 +404,35 @@ class DetailScreen extends ConsumerWidget {
                 SliverPadding(
                   padding: const EdgeInsets.symmetric(horizontal: 20.0),
                   sliver: SliverList(
-                    delegate: SliverChildBuilderDelegate(
-                      (context, rowIndex) {
-                        final leftIndex = rowIndex * 2;
-                        final rightIndex = leftIndex + 1;
-                        return Padding(
-                          padding: const EdgeInsets.only(bottom: 12),
-                          child: Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Expanded(child: _buildImageCard(context, comments, leftIndex)),
-                              const SizedBox(width: 12),
-                              rightIndex < comments.length
-                                  ? Expanded(child: _buildImageCard(context, comments, rightIndex))
-                                  : const Expanded(child: SizedBox()),
-                            ],
-                          ),
-                        );
-                      },
-                      childCount: (comments.length / 2).ceil(),
-                    ),
+                    delegate: SliverChildBuilderDelegate((context, rowIndex) {
+                      final leftIndex = rowIndex * 2;
+                      final rightIndex = leftIndex + 1;
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(
+                              child: _buildImageCard(
+                                context,
+                                comments,
+                                leftIndex,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            rightIndex < comments.length
+                                ? Expanded(
+                                    child: _buildImageCard(
+                                      context,
+                                      comments,
+                                      rightIndex,
+                                    ),
+                                  )
+                                : const Expanded(child: SizedBox()),
+                          ],
+                        ),
+                      );
+                    }, childCount: (comments.length / 2).ceil()),
                   ),
                 ),
 
@@ -428,7 +445,11 @@ class DetailScreen extends ConsumerWidget {
   }
 
   // ─── 이미지 카드 빌더 (코멘트 잘림 해결: 고정 이미지 높이 + 가변 텍스트) ───
-  Widget _buildImageCard(BuildContext context, List<TripCommentModel> comments, int index) {
+  Widget _buildImageCard(
+    BuildContext context,
+    List<TripCommentModel> comments,
+    int index,
+  ) {
     final item = comments[index];
     return GestureDetector(
       onTap: () {
@@ -438,9 +459,13 @@ class DetailScreen extends ConsumerWidget {
             opaque: false,
             barrierDismissible: true,
             pageBuilder: (context, animation, secondaryAnimation) =>
-                ImageCommentViewer(imageComments: comments, initialIndex: index),
-            transitionsBuilder: (context, animation, secondaryAnimation, child) =>
-                FadeTransition(opacity: animation, child: child),
+                ImageCommentViewer(
+                  imageComments: comments,
+                  initialIndex: index,
+                ),
+            transitionsBuilder:
+                (context, animation, secondaryAnimation, child) =>
+                    FadeTransition(opacity: animation, child: child),
           ),
         );
       },
@@ -462,7 +487,9 @@ class DetailScreen extends ConsumerWidget {
           children: [
             // 이미지 영역: 고정 높이
             ClipRRect(
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(14)),
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(14),
+              ),
               child: SizedBox(
                 height: 140,
                 width: double.infinity,
@@ -479,7 +506,10 @@ class DetailScreen extends ConsumerWidget {
             // 💡 코멘트 영역: 고정 높이 제거 → 텍스트 길이에 따라 자연스럽게 늘어남
             if (item.comment.isNotEmpty)
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 10.0, vertical: 8.0),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10.0,
+                  vertical: 8.0,
+                ),
                 child: Text(
                   item.comment,
                   style: const TextStyle(

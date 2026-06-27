@@ -265,9 +265,11 @@ class TripFormNotifier extends _$TripFormNotifier {
       // 1. 리스트 화면 프로바이더 무효화
       ref.invalidate(tripListProvider);
 
-      // 2. 디테일 화면 프로바이더 무효화 및 즉시 새 데이터 로드 대기
+      // 2. 대표 이미지 프로바이더 무효화 → 홈 카드 이미지 즉시 갱신
+      ref.invalidate(tripFirstImageProvider(savedTripId));
+
+      // 3. 디테일 화면 프로바이더 무효화 및 즉시 새 데이터 로드 대기
       ref.invalidate(tripDetailProvider(savedTripId));
-      // 디테일 화면이 즉시 리빌드되도록 확실히 하기 위해 read 호출로 한 번 깨워줍니다.
       await ref.read(tripDetailProvider(savedTripId).future);
 
       // 💡 최종 상태 역시 TripFormState 구조에 맞추어 갱신해 줍니다.
