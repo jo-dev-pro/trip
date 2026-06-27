@@ -41,7 +41,7 @@ final class BackupRestoreProvider
   }
 }
 
-String _$backupRestoreHash() => r'3fd5499d52e2a31785d6c50b3825395ca53feee1';
+String _$backupRestoreHash() => r'f2c0c4beda20018992ad4ecd114f0d1021b3da6f';
 
 abstract class _$BackupRestore extends $Notifier<BackupRestoreState> {
   BackupRestoreState build();
