@@ -12,7 +12,6 @@ class JOnPopInvoked extends _$JOnPopInvoked {
   DateTime? _backButtonPressedTime;
 
   @override
-  @override
   bool build() {
     // 🔥 변경: 상태(state)의 타입을 bool로 설정합니다. (기본값은 false)
     return false;
