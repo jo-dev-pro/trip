@@ -1,8 +1,8 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
-import 'package:trip/model/trip_comment_model.dart'; // SQLite용 모델 사용
-import 'package:trip/model/daily_note_model.dart';
-import 'package:trip/repository/repository.dart';
+import '../model/trip_comment_model.dart'; // SQLite용 모델 사용
+import '../model/daily_note_model.dart';
+import '../repository/repository.dart';
 import 'trip_detail_state.dart';
 
 part 'create_provider.g.dart';

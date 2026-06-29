@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
-import 'package:trip/provider/trip_detail_state.dart';
-import 'package:trip/screen/edit/edit_screen.dart';
-import 'package:trip/screen/home/detail/detail.dart';
-import 'package:trip/screen/home/home_screen.dart';
+import '../../provider/trip_detail_state.dart';
+import '../../screen/edit/edit_screen.dart';
+import '../../screen/home/detail/detail.dart';
+import '../../screen/home/home_screen.dart';
 import '../../backup_restore/backup_restore_screen.dart';
 import 'route.dart';
 

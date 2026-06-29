@@ -2,7 +2,8 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:trip/provider/trip_provider.dart'; // 💡 수정된 통합 프로바이더 경로로 변경
+
+import '../../provider/trip_provider.dart';
 
 class ImagePickerSheet extends ConsumerStatefulWidget {
   const ImagePickerSheet({super.key});
@@ -15,6 +16,9 @@ class _ImagePickerSheetState extends ConsumerState<ImagePickerSheet> {
   List<XFile> _galleryImages = [];
   final Set<int> _selectedIndexes = {};
   bool _loading = false;
+  
+  // 💡 최대 선택 가능 개수 설정
+  final int _maxImageLimit = 30; 
 
   @override
   void initState() {
@@ -23,19 +27,46 @@ class _ImagePickerSheetState extends ConsumerState<ImagePickerSheet> {
   }
 
   Future<void> _loadGallery() async {
-    setState(() => _loading = true);
-    // photo_manager 미사용 시, 진입하자마자 갤러리를 자동으로 열어주는 흐름도 좋습니다.
-    setState(() => _loading = false);
+    // 초기 로드 로직 (필요 시 유지)
   }
 
   Future<void> _pickFromGallery() async {
-    final picker = ImagePicker();
-    final picked = await picker.pickMultiImage(imageQuality: 85);
-    if (picked.isNotEmpty) {
-      setState(() {
-        _galleryImages = picked;
-        _selectedIndexes.clear();
-      });
+    // 💡 1. 갤러리를 열기 전 로딩 상태 활성화
+    setState(() => _loading = true);
+
+    try {
+      final picker = ImagePicker();
+      // 💡 limit 파라미터로 갤러리 자체에서 개수를 제한 (지원하는 OS 버전에서 작동)
+      final picked = await picker.pickMultiImage(
+        imageQuality: 85,
+        limit: _maxImageLimit, 
+      );
+
+      if (picked.isNotEmpty) {
+        // 💡 2. 만약 사용자가 제한 개수를 초과해서 선택하려고 했거나, 많이 선택한 경우 안내
+        if (picked.length > _maxImageLimit) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('사진은 최대 $_maxImageLimit장까지만 선택 가능합니다.')),
+            );
+          }
+          // 제한된 개수만큼만 잘라서 할당
+          setState(() {
+            _galleryImages = picked.sublist(0, _maxImageLimit);
+            _selectedIndexes.clear();
+          });
+        } else {
+          setState(() {
+            _galleryImages = picked;
+            _selectedIndexes.clear();
+          });
+        }
+      }
+    } catch (e) {
+      // 에러 처리
+    } finally {
+      // 💡 3. 이미지 처리가 끝나면 로딩 상태 해제
+      setState(() => _loading = false);
     }
   }
 
@@ -46,7 +77,6 @@ class _ImagePickerSheetState extends ConsumerState<ImagePickerSheet> {
       return;
     }
 
-    // 💡 변경: 기존 createNotifier 대신 새롭게 설계한 tripFormNotifier를 트리거합니다.
     await ref
         .read(tripFormProvider.notifier)
         .addImagesFromGallery(selected);
@@ -79,7 +109,7 @@ class _ImagePickerSheetState extends ConsumerState<ImagePickerSheet> {
             ),
             // 헤더 영역
             Padding(
-              padding: const EdgeInsets.only(top:4, bottom: 4, left: 16, right: 10),
+              padding: const EdgeInsets.only(top: 4, bottom: 4, left: 16, right: 10),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -94,23 +124,19 @@ class _ImagePickerSheetState extends ConsumerState<ImagePickerSheet> {
                   Row(
                     children: [
                       TextButton(
-                        onPressed: _pickFromGallery,
+                        onPressed: _loading ? null : _pickFromGallery, // 로딩 중 클릭 방지
                         child: Text(
                           '갤러리열기 ',
                           style: TextStyle(color: Colors.indigo.shade600),
                         ),
                       ),
-                      if (_selectedIndexes.isNotEmpty) ...[
-                        // const SizedBox(width: 8),
+                      if (_selectedIndexes.isNotEmpty && !_loading) ...[
                         ElevatedButton(
                           onPressed: _confirmSelection,
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.indigo.shade700,
                             foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 8,
-                            ),
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(8),
                             ),
@@ -126,81 +152,92 @@ class _ImagePickerSheetState extends ConsumerState<ImagePickerSheet> {
             const Divider(height: 1),
             // 이미지 그리드 목록 영역
             Expanded(
+              // 💡 로딩 바가 돌 때 스피너를 보여줌으로써 앱이 멈추지 않았음을 인지시킴
               child: _loading
-                  ? const Center(child: CircularProgressIndicator())
-                  : _galleryImages.isEmpty
-                  ? Center(
+                  ? const Center(
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(
-                            Icons.photo_library_outlined,
-                            size: 64,
-                            color: Colors.grey.shade400,
-                          ),
-                          const SizedBox(height: 16),
-                          Text(
-                            '"갤러리 열기"를 눌러 사진을 불러오세요',
-                            style: TextStyle(color: Colors.grey.shade500),
-                          ),
+                          CircularProgressIndicator(),
+                          SizedBox(height: 16),
+                          Text('이미지를 불러오는 중입니다...'),
                         ],
                       ),
                     )
-                  : GridView.builder(
-                      controller: scrollController,
-                      padding: const EdgeInsets.all(12),
-                      gridDelegate:
-                          const SliverGridDelegateWithFixedCrossAxisCount(
+                  : _galleryImages.isEmpty
+                      ? Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.photo_library_outlined,
+                                size: 64,
+                                color: Colors.grey.shade400,
+                              ),
+                              const SizedBox(height: 16),
+                              Text(
+                                '"갤러리 열기"를 눌러 사진을 불러오세요\n(최대 $_maxImageLimit장)',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(color: Colors.grey.shade500),
+                              ),
+                            ],
+                          ),
+                        )
+                      : GridView.builder(
+                          controller: scrollController,
+                          padding: const EdgeInsets.all(12),
+                          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                             crossAxisCount: 3,
                             crossAxisSpacing: 6,
                             mainAxisSpacing: 6,
                           ),
-                      itemCount: _galleryImages.length,
-                      itemBuilder: (_, i) {
-                        final isSelected = _selectedIndexes.contains(i);
-                        return GestureDetector(
-                          onTap: () {
-                            setState(() {
-                              if (isSelected) {
-                                _selectedIndexes.remove(i);
-                              } else {
-                                _selectedIndexes.add(i);
-                              }
-                            });
-                          },
-                          child: Stack(
-                            fit: StackFit.expand,
-                            children: [
-                              ClipRRect(
-                                borderRadius: BorderRadius.circular(8),
-                                child: Image.file(
-                                  File(_galleryImages[i].path),
-                                  fit: BoxFit.cover,
-                                ),
-                              ),
-                              if (isSelected)
-                                Container(
-                                  decoration: BoxDecoration(
-                                    color: Colors.indigo.withOpacity(0.4),
+                          itemCount: _galleryImages.length,
+                          itemBuilder: (_, i) {
+                            final isSelected = _selectedIndexes.contains(i);
+                            return GestureDetector(
+                              onTap: () {
+                                setState(() {
+                                  if (isSelected) {
+                                    _selectedIndexes.remove(i);
+                                  } else {
+                                    _selectedIndexes.add(i);
+                                  }
+                                });
+                              },
+                              child: Stack(
+                                fit: StackFit.expand,
+                                children: [
+                                  ClipRRect(
                                     borderRadius: BorderRadius.circular(8),
-                                    border: Border.all(
-                                      color: Colors.indigo.shade600,
-                                      width: 2.5,
+                                    child: Image.file(
+                                      File(_galleryImages[i].path),
+                                      fit: BoxFit.cover,
+                                      cacheWidth: 300, // 💡 메모리 최적화를 위해 캐시 사이즈 제한
                                     ),
                                   ),
-                                  child: const Center(
-                                    child: Icon(
-                                      Icons.check_circle,
-                                      color: Colors.white,
-                                      size: 32,
+                                  if (isSelected)
+                                    Container(
+                                      decoration: BoxDecoration(
+                                        color: Colors.indigo.withOpacity(0.4),
+                                        borderRadius: BorderRadius.circular(8),
+                                        border: Border.all(
+                                          color: Colors.indigo.shade600,
+                                          width: 2.5,
+                                        ),
+                                      ),
+                                      child: const Center(
+                                        child: Icon(
+                                          Icons.check_circle,
+                                          color: Colors.white,
+                                          size: 32,
+                                        ),
+                                      ),
                                     ),
-                                  ),
-                                ),
-                            ],
-                          ),
-                        );
-                      },
-                    ),
+                                ],
+                              ),
+                            );
+                          },
+                        ),
             ),
           ],
         ),

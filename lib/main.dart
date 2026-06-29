@@ -4,7 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'common/route/app_routers.dart';
 
-
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 

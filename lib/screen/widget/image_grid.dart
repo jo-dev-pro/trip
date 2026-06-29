@@ -1,7 +1,7 @@
 import 'dart:io';
-
 import 'package:flutter/material.dart';
-import 'package:trip/model/trip_comment_model.dart';
+
+import '../../model/trip_comment_model.dart';
 
 // 이미지 그리드 (선택된 이미지 목록)
 class ImageGrid extends StatelessWidget {

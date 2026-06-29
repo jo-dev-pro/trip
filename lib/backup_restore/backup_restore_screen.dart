@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:trip/common/util/helper/helper_functions.dart';
-import 'package:trip/provider/trip_provider.dart';
+
+import '../common/util/helper/helper_functions.dart';
+import '../provider/trip_provider.dart';
 
 import 'backup_restore_provider.dart';
 

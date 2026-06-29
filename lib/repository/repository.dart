@@ -1,7 +1,8 @@
 import 'package:sqflite/sqflite.dart';
-import 'package:trip/model/trip_model.dart';
-import 'package:trip/model/trip_comment_model.dart';
-import 'package:trip/model/daily_note_model.dart';
+
+import '../../model/trip_model.dart';
+import '../../model/trip_comment_model.dart';
+import '../../model/daily_note_model.dart';
 import 'database_helper.dart';
 
 class TripRepository {

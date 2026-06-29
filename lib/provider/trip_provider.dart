@@ -1,15 +1,14 @@
 import 'dart:io';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:uuid/uuid.dart';
 
-import 'package:trip/model/daily_note_model.dart';
-import 'package:trip/model/trip_comment_model.dart';
-import 'package:trip/model/trip_model.dart';
-import 'package:trip/repository/repository.dart';
+import '../model/daily_note_model.dart';
+import '../model/trip_comment_model.dart';
+import '../model/trip_model.dart';
+import '../repository/repository.dart';
 import 'trip_detail_state.dart';
 
 part 'trip_provider.g.dart';

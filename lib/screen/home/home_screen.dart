@@ -1,15 +1,14 @@
 import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
-import 'package:trip/common/route/route.dart';
-import 'package:trip/model/trip_model.dart';
-import 'package:trip/provider/trip_provider.dart';
-import 'package:trip/screen/create/create_screen.dart';
-import 'package:trip/screen/home/widget/build_empty_state.dart';
+import '../../common/route/route.dart';
+import '../../model/trip_model.dart';
+import '../../provider/trip_provider.dart';
+import '../create/create_screen.dart';
+import 'widget/build_empty_state.dart';
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
