@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'widgets/pulseicon.dart';
 
 class JLoaders {
-
   // snackbar
   static void successSnackBar(
     BuildContext context, {
@@ -44,7 +43,7 @@ class JLoaders {
           ),
         ),
         behavior: SnackBarBehavior.floating, // margin을 주려면 floating 필수
-        backgroundColor: Colors.deepPurple, // backgroundColor 대응
+        backgroundColor: Colors.indigo, // backgroundColor 대응
         duration: Duration(seconds: duration), // duration 대응
         margin: const EdgeInsets.all(10), // margin 대응
         shape: RoundedRectangleBorder(

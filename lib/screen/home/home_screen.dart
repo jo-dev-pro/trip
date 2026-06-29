@@ -10,6 +10,8 @@ import '../../provider/trip_provider.dart';
 import '../create/create_screen.dart';
 import 'widget/build_empty_state.dart';
 
+import '../../common/widget/popscope.dart';
+
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
 
@@ -18,78 +20,84 @@ class HomeScreen extends ConsumerWidget {
     // 💡 프로바이더가 AsyncValue<List<TripModel>>을 반환하므로 타입을 일치시킵니다.
     final tripListAsync = ref.watch(tripListProvider);
 
-    return DefaultTabController(
-      length: 2,
-      child: Scaffold(
-        backgroundColor: const Color(0xFFF4F6FA),
-        appBar: AppBar(
-          backgroundColor: Colors.indigo.shade700,
-          foregroundColor: Colors.white,
-          title: const Text(
-            '나의 여행 다이어리',
-            style: TextStyle(fontWeight: FontWeight.bold),
-          ),
-          actions: [
-            Row(
-              children: [
-                GestureDetector(
-                  child: CircleAvatar(
-                    backgroundColor: Colors.grey.withValues(alpha: 0.8),
-                    radius: 20,
-                    child: Icon(
-                      Icons.settings_backup_restore_outlined,
-                      color: Colors.indigo.shade800,
-                      size: 22,
-                    ),
-                  ),
-                  onTap: () => context.pushNamed(JRoutes.backup),
+    return JPopScope(
+      child: DefaultTabController(
+        length: 2,
+        child: Scaffold(
+          backgroundColor: const Color(0xFFF4F6FA),
+          appBar: AppBar(
+            backgroundColor: Colors.indigo.shade700,
+            foregroundColor: Colors.white,
+            title: const Text(
+              '나의 여행 다이어리',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+            actions: [
+              // 새 일정 추가 버튼
+              TextButton.icon(
+                onPressed: () async {
+                  ref.invalidate(tripFormProvider);
+                  await Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const CreateScreen()),
+                  );
+                  ref.read(tripListProvider.notifier).refresh();
+                },
+                icon: const Icon(
+                  Icons.add_location_alt_outlined,
+                  color: Colors.white,
+                  size: 20,
                 ),
-                SizedBox(width: 10),
+                label: const Text(
+                  '새 일정',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              // 기존 백업 버튼
+              GestureDetector(
+                child: CircleAvatar(
+                  backgroundColor: Colors.grey.withValues(alpha: 0.8),
+                  radius: 20,
+                  child: Icon(
+                    Icons.settings_backup_restore_outlined,
+                    color: Colors.indigo.shade800,
+                    size: 22,
+                  ),
+                ),
+                onTap: () => context.pushNamed(JRoutes.backup),
+              ),
+              const SizedBox(width: 10),
+            ],
+            elevation: 0,
+            bottom: const TabBar(
+              labelColor: Colors.white,
+              unselectedLabelColor: Colors.white70,
+              indicatorColor: Colors.white,
+              indicatorWeight: 3,
+              labelStyle: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+              tabs: [
+                Tab(text: '다가오는 여행'),
+                Tab(text: '지난 추억'),
               ],
             ),
-          ],
-          elevation: 0,
-          bottom: const TabBar(
-            labelColor: Colors.white,
-            unselectedLabelColor: Colors.white70,
-            indicatorColor: Colors.white,
-            indicatorWeight: 3,
-            labelStyle: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
-            tabs: [
-              Tab(text: '다가오는 여행'),
-              Tab(text: '지난 추억'),
-            ],
           ),
-        ),
-        body: tripListAsync.when(
-          data: (list) {
-            if (list.isEmpty) {
-              return const BuildEmptyState();
-            }
-            // 💡 이제 List<TripModel> 타입이 정확히 맞아떨어집니다!
-            return _buildTabBarView(list);
-          },
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (err, stack) => Center(
-            child: Text('데이터를 불러오지 못했습니다:\n$err', textAlign: TextAlign.center),
-          ),
-        ),
-        floatingActionButton: FloatingActionButton.extended(
-          onPressed: () async {
-            ref.invalidate(tripFormProvider);
-
-            await Navigator.of(
-              context,
-            ).push(MaterialPageRoute(builder: (_) => const CreateScreen()));
-
-            ref.read(tripListProvider.notifier).refresh();
-          },
-          backgroundColor: Colors.indigo.shade700,
-          foregroundColor: Colors.white,
-          icon: const Icon(Icons.add_location_alt_outlined),
-          label: const Text(
-            '새 일정 추가',
-            style: TextStyle(fontWeight: FontWeight.bold),
+          body: tripListAsync.when(
+            data: (list) {
+              if (list.isEmpty) {
+                return const BuildEmptyState();
+              }
+              // 💡 이제 List<TripModel> 타입이 정확히 맞아떨어집니다!
+              return _buildTabBarView(list);
+            },
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (err, stack) => Center(
+              child: Text(
+                '데이터를 불러오지 못했습니다:\n$err',
+                textAlign: TextAlign.center,
+              ),
+            ),
           ),
         ),
       ),
@@ -187,11 +195,8 @@ class HomeScreen extends ConsumerWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // ── 💡 대표 이미지 표시 구역 ──
-                // 현재 구조상 TripModel 내부에 이미지가 없으므로,
-                // 이미지 로드가 완료되기 전까지는 우선 일관성 있게 에러 빌더(아이콘)나 플레이스홀더를 보여줍니다.
-                // ※ 추후 특정 trip.id에 대응하는 첫 번째 comment.path를 불러오는 프로바이더를 연동하면 완벽합니다.
-                _buildMainImage(trip.id),
+                // ── 대표 이미지 표시 구역 ──
+                _buildMainImage(trip),
 
                 Padding(
                   padding: const EdgeInsets.all(16),
@@ -207,9 +212,7 @@ class HomeScreen extends ConsumerWidget {
                               vertical: 4,
                             ),
                             decoration: BoxDecoration(
-                              color: isPast
-                                  ? Colors.grey.shade200
-                                  : Colors.indigo.shade50,
+                              color: Colors.indigo.shade100,
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: Text(
@@ -217,9 +220,7 @@ class HomeScreen extends ConsumerWidget {
                               style: TextStyle(
                                 fontSize: 12,
                                 fontWeight: FontWeight.bold,
-                                color: isPast
-                                    ? Colors.grey.shade700
-                                    : Colors.indigo.shade700,
+                                color: Colors.indigo.shade700,
                               ),
                             ),
                           ),
@@ -292,50 +293,33 @@ class HomeScreen extends ConsumerWidget {
     );
   }
 
-  // ── 💡 여행 ID별로 첫 번째 이미지를 안전하게 로드하기 위한 빌더 위젯 ──
-  Widget _buildMainImage(int? tripId) {
-    if (tripId == null) return _buildPlaceholderImage();
+  // ── 💡 TripModel에서 직접 coverImagePath 또는 첫 이미지를 사용 ──
+  //    tripFirstImageProvider 대신 이미 로드된 모델에서 직접 읽어 캐시 문제 해결
+  Widget _buildMainImage(TripModel trip) {
+    // coverImagePath 우선, 없으면 플레이스홀더
+    final imagePath = trip.coverImagePath;
 
-    return Consumer(
-      builder: (context, ref, child) {
-        // ✨ 비동기로 바뀐 tripFirstImageProvider(AsyncValue 상태)를 감시합니다.
-        final imageAsync = ref.watch(tripFirstImageProvider(tripId));
+    if (imagePath == null || imagePath.isEmpty) {
+      return _buildPlaceholderImage();
+    }
 
-        return imageAsync.when(
-          data: (imagePath) {
-            // 이미지 경로가 비어있거나 없는 경우 기본 플레이스홀더 표시
-            if (imagePath == null || imagePath.isEmpty) {
-              return _buildPlaceholderImage();
-            }
+    final isNetwork =
+        imagePath.startsWith('http') || imagePath.startsWith('https');
 
-            // 경로 규칙 분기 (네트워크 URL 인지 로컬 기기 파일 경로 인지 구분)
-            final isNetwork =
-                imagePath.startsWith('http') || imagePath.startsWith('https');
-
-            return SizedBox(
-              height: 150,
-              width: double.infinity,
-              child: isNetwork
-                  ? Image.network(
-                      imagePath,
-                      fit: BoxFit.cover,
-                      errorBuilder: (ctx, err, stack) =>
-                          _buildPlaceholderImage(),
-                    )
-                  : Image.file(
-                      File(imagePath),
-                      fit: BoxFit.cover,
-                      errorBuilder: (ctx, err, stack) =>
-                          _buildPlaceholderImage(),
-                    ),
-            );
-          },
-          // 이미지를 DB에서 읽어오는 동안 보여줄 임시 뼈대 스켈레톤 (플레이스홀더로 대체)
-          loading: () => _buildPlaceholderImage(),
-          // 에러 발생 시에도 깨지지 않게 플레이스홀더 배치
-          error: (err, stack) => _buildPlaceholderImage(),
-        );
-      },
+    return SizedBox(
+      height: 150,
+      width: double.infinity,
+      child: isNetwork
+          ? Image.network(
+              imagePath,
+              fit: BoxFit.cover,
+              errorBuilder: (ctx, err, stack) => _buildPlaceholderImage(),
+            )
+          : Image.file(
+              File(imagePath),
+              fit: BoxFit.cover,
+              errorBuilder: (ctx, err, stack) => _buildPlaceholderImage(),
+            ),
     );
   }
 
@@ -344,14 +328,14 @@ class HomeScreen extends ConsumerWidget {
     return Container(
       height: 150,
       width: double.infinity,
-      color: const Color(0xFFEAEFFB), // 은은한 인디고 톤 배경색
+      color: Colors.indigo.shade50,
       child: Center(
         child: Icon(
-          Icons.image_outlined,
-          color: Colors.indigo.shade200,
-          size: 36,
+          Icons.flight_takeoff,
+          color: Colors.indigo.shade300,
+          size: 48,
         ),
       ),
     );
   }
-} // HomeScreen 클래스 끝
+}

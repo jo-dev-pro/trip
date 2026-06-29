@@ -15,10 +15,12 @@ class ImagePickerSheet extends ConsumerStatefulWidget {
 class _ImagePickerSheetState extends ConsumerState<ImagePickerSheet> {
   List<XFile> _galleryImages = [];
   final Set<int> _selectedIndexes = {};
-  bool _loading = false;
+
+  bool _loading = false; // 갤러리 picker 대기 중
+  bool _rendering = false; // 💡 이미지 그리드 렌더링 중
   
   // 💡 최대 선택 가능 개수 설정
-  final int _maxImageLimit = 30; 
+  final int _maxImageLimit = 30;
 
   @override
   void initState() {
@@ -36,38 +38,61 @@ class _ImagePickerSheetState extends ConsumerState<ImagePickerSheet> {
 
     try {
       final picker = ImagePicker();
-      // 💡 limit 파라미터로 갤러리 자체에서 개수를 제한 (지원하는 OS 버전에서 작동)
+      // 💡 limit 파라미터로 갤러리 자체에서 개수를 제한
       final picked = await picker.pickMultiImage(
         imageQuality: 85,
         limit: _maxImageLimit, 
       );
 
-      if (picked.isNotEmpty) {
-        // 💡 2. 만약 사용자가 제한 개수를 초과해서 선택하려고 했거나, 많이 선택한 경우 안내
-        if (picked.length > _maxImageLimit) {
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('사진은 최대 $_maxImageLimit장까지만 선택 가능합니다.')),
-            );
-          }
-          // 제한된 개수만큼만 잘라서 할당
+      if (picked.isEmpty) return;
+
+      // 💡 2. 갤러리 선택 완료 -> 렌더링 시작 전 로딩 표시 유지 및 렌더링 상태 활성화
+      setState(() {
+        _rendering = true;
+      });
+
+      // 만약 사용자가 다른 방식으로 제한 개수를 초과해 가져왔을 때를 대비한 방어 코드
+      final finalImages = picked.length > _maxImageLimit 
+          ? picked.sublist(0, _maxImageLimit) 
+          : picked;
+
+      if (picked.length > _maxImageLimit && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('사진은 최대 $_maxImageLimit장까지만 선택 가능합니다.')),
+        );
+      }
+
+      // 다음 프레임에 이미지 목록 세팅 -> UI가 로딩 인디케이터를 먼저 그린 뒤 이미지 로드
+      await Future.microtask(() {
+        if (mounted) {
           setState(() {
-            _galleryImages = picked.sublist(0, _maxImageLimit);
+            _galleryImages = finalImages;
             _selectedIndexes.clear();
-          });
-        } else {
-          setState(() {
-            _galleryImages = picked;
-            _selectedIndexes.clear();
+            _loading = false; // 목록은 세팅됐지만 렌더링은 아직 진행 중
           });
         }
-      }
+      });
+
+      // 💡 이미지가 실제로 화면에 그려진 뒤 렌더링 완료 처리
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) setState(() => _rendering = false);
+      });
+
     } catch (e) {
-      // 에러 처리
-    } finally {
-      // 💡 3. 이미지 처리가 끝나면 로딩 상태 해제
-      setState(() => _loading = false);
+      if (mounted) {
+        setState(() {
+          _loading = false;
+          _rendering = false;
+        });
+      }
     }
+  }
+
+  // 💡 전체 선택
+  void _selectAll() {
+    setState(() {
+      _selectedIndexes.addAll(List.generate(_galleryImages.length, (i) => i));
+    });
   }
 
   Future<void> _confirmSelection() async {
@@ -76,13 +101,14 @@ class _ImagePickerSheetState extends ConsumerState<ImagePickerSheet> {
       Navigator.pop(context);
       return;
     }
-
-    await ref
-        .read(tripFormProvider.notifier)
-        .addImagesFromGallery(selected);
-
+    await ref.read(tripFormProvider.notifier).addImagesFromGallery(selected);
     if (mounted) Navigator.pop(context);
   }
+
+  // 전체선택 여부
+  bool get _isAllSelected =>
+      _galleryImages.isNotEmpty &&
+      _selectedIndexes.length == _galleryImages.length;
 
   @override
   Widget build(BuildContext context) {
@@ -107,60 +133,88 @@ class _ImagePickerSheetState extends ConsumerState<ImagePickerSheet> {
                 borderRadius: BorderRadius.circular(4),
               ),
             ),
-            // 헤더 영역
+            // 헤더
             Padding(
-              padding: const EdgeInsets.only(top: 4, bottom: 4, left: 16, right: 10),
+              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
               child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
-                    '사진 선택',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.indigo.shade800,
+                  // 닫기
+                  IconButton(
+                    icon: Icon(Icons.close, color: Colors.grey.shade600),
+                    onPressed: () => Navigator.pop(context),
+                    tooltip: '닫기',
+                  ),
+                  // 제목
+                  Expanded(
+                    child: Text(
+                      '사진 선택',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.indigo.shade800,
+                      ),
+                      textAlign: TextAlign.center,
                     ),
                   ),
-                  Row(
-                    children: [
-                      TextButton(
-                        onPressed: _loading ? null : _pickFromGallery, // 로딩 중 클릭 방지
+                  // 갤러리 열기
+                  TextButton(
+                    onPressed: (_loading || _rendering) ? null : _pickFromGallery,
+                    child: Text(
+                      '갤러리',
+                      style: TextStyle(color: Colors.indigo.shade600),
+                    ),
+                  ),
+                  // 💡 전체선택: 이미지 있고 전체 미선택 상태일 때만 표시
+                  if (_galleryImages.isNotEmpty && !_isAllSelected && !_rendering)
+                    Padding(
+                      padding: const EdgeInsets.only(right: 4),
+                      child: TextButton(
+                        onPressed: _selectAll,
                         child: Text(
-                          '갤러리열기 ',
-                          style: TextStyle(color: Colors.indigo.shade600),
+                          '전체선택',
+                          style: TextStyle(color: Colors.indigo.shade400),
                         ),
                       ),
-                      if (_selectedIndexes.isNotEmpty && !_loading) ...[
-                        ElevatedButton(
-                          onPressed: _confirmSelection,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.indigo.shade700,
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
-                            ),
+                    ),
+                  // 선택완료
+                  if (_selectedIndexes.isNotEmpty && !_rendering)
+                    Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: ElevatedButton(
+                        onPressed: _confirmSelection,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.indigo.shade700,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
                           ),
-                          child: Text('선택 완료 (${_selectedIndexes.length})'),
                         ),
-                      ],
-                    ],
-                  ),
+                        child: Text('완료 (${_selectedIndexes.length})'),
+                      ),
+                    ),
                 ],
               ),
             ),
             const Divider(height: 1),
-            // 이미지 그리드 목록 영역
+            // 본문
             Expanded(
-              // 💡 로딩 바가 돌 때 스피너를 보여줌으로써 앱이 멈추지 않았음을 인지시킴
-              child: _loading
-                  ? const Center(
+              child: _loading || _rendering
+                  ? Center(
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          CircularProgressIndicator(),
-                          SizedBox(height: 16),
-                          Text('이미지를 불러오는 중입니다...'),
+                          CircularProgressIndicator(
+                            color: Colors.indigo.shade400,
+                          ),
+                          const SizedBox(height: 16),
+                          Text(
+                            '사진을 불러오는 중...',
+                            style: TextStyle(
+                              color: Colors.grey.shade500,
+                              fontSize: 14,
+                            ),
+                          ),
                         ],
                       ),
                     )
@@ -176,7 +230,7 @@ class _ImagePickerSheetState extends ConsumerState<ImagePickerSheet> {
                               ),
                               const SizedBox(height: 16),
                               Text(
-                                '"갤러리 열기"를 눌러 사진을 불러오세요\n(최대 $_maxImageLimit장)',
+                                '"갤러리"를 눌러 사진을 불러오세요\n(최대 $_maxImageLimit장)',
                                 textAlign: TextAlign.center,
                                 style: TextStyle(color: Colors.grey.shade500),
                               ),
@@ -212,7 +266,8 @@ class _ImagePickerSheetState extends ConsumerState<ImagePickerSheet> {
                                     child: Image.file(
                                       File(_galleryImages[i].path),
                                       fit: BoxFit.cover,
-                                      cacheWidth: 300, // 💡 메모리 최적화를 위해 캐시 사이즈 제한
+                                      cacheWidth: 300,
+                                      cacheHeight: 300,
                                     ),
                                   ),
                                   if (isSelected)

@@ -23,8 +23,9 @@ class DatabaseHelper {
 
     return await openDatabase(
       path,
-      version: 1,
+      version: 2, // 💡 버전 2로 업그레이드
       onCreate: _createDB,
+      onUpgrade: _onUpgrade, // 💡 마이그레이션 추가
       onConfigure: _onConfigure,
     );
   }
@@ -32,6 +33,16 @@ class DatabaseHelper {
   // 외래키(Foreign Key) 활성화
   Future _onConfigure(Database db) async {
     await db.execute('PRAGMA foreign_keys = ON');
+  }
+
+  // 💡 DB 버전 업그레이드 시 마이그레이션
+  Future _onUpgrade(Database db, int oldVersion, int newVersion) async {
+    if (oldVersion < 2) {
+      // v1 → v2: trip 테이블에 coverImagePath 컬럼 추가
+      await db.execute(
+        'ALTER TABLE ${TripDbInfo.tableName} ADD COLUMN ${TripDbInfo.coverImagePath} TEXT',
+      );
+    }
   }
 
   Future _createDB(Database db, int version) async {
@@ -43,7 +54,8 @@ class DatabaseHelper {
         ${TripDbInfo.place} TEXT NOT NULL,
         ${TripDbInfo.startDate} TEXT,
         ${TripDbInfo.endDate} TEXT,
-        ${TripDbInfo.note} TEXT
+        ${TripDbInfo.note} TEXT,
+        ${TripDbInfo.coverImagePath} TEXT
       )
     ''');
 
