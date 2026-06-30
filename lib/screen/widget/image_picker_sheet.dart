@@ -33,35 +33,46 @@ class _ImagePickerSheetState extends ConsumerState<ImagePickerSheet> {
   }
 
   Future<void> _pickFromGallery() async {
-    // 💡 1. 갤러리를 열기 전 로딩 상태 활성화
+    // 💡 1. 갤러리를 열기 전 로딩 상태 활성화 - 버튼 누르자마자 즉시 로딩 상태 활성화
     setState(() => _loading = true);
 
     try {
       final picker = ImagePicker();
-      // 💡 limit 파라미터로 갤러리 자체에서 개수를 제한
+     // limit을 적어도 기기가 무시할 수 있으므로, 아래에서 수동으로 한 번 더 체크합니다.
       final picked = await picker.pickMultiImage(
         imageQuality: 85,
         limit: _maxImageLimit, 
       );
 
-      if (picked.isEmpty) return;
+      // 아무것도 선택 안 하고 돌아왔을 때
+      if (picked.isEmpty) {
+        setState(() => _loading = false);
+        return;
+      }
 
-      // 💡 2. 갤러리 선택 완료 -> 렌더링 시작 전 로딩 표시 유지 및 렌더링 상태 활성화
+      // 💡 2. [개수 제한 치트키] 사용자가 30개 넘게 선택해왔다면 강제로 30개만 자르기
+      List<XFile> finalImages = picked;
+      if (picked.length > _maxImageLimit) {
+        finalImages = picked.sublist(0, _maxImageLimit);
+        
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('사진은 최대 $_maxImageLimit장까지만 선택 가능합니다. (초과분 제외)'),
+              duration: const Duration(seconds: 2),
+            ),
+          );
+        }
+      }
+
+      // 💡 3. [로딩 바 활성화 치트키] 갤러리에서 복귀 후 렌더링 시작 전 로딩 표시 확실히 켜기
       setState(() {
         _rendering = true;
       });
 
-      // 만약 사용자가 다른 방식으로 제한 개수를 초과해 가져왔을 때를 대비한 방어 코드
-      final finalImages = picked.length > _maxImageLimit 
-          ? picked.sublist(0, _maxImageLimit) 
-          : picked;
-
-      if (picked.length > _maxImageLimit && mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('사진은 최대 $_maxImageLimit장까지만 선택 가능합니다.')),
-        );
-      }
-
+      // 0.1초의 미세한 지연을 주어 UI가 '사진을 불러오는 중...' 화면을 먼저 그리도록 강제합니다.
+      await Future.delayed(const Duration(milliseconds: 100));
+      
       // 다음 프레임에 이미지 목록 세팅 -> UI가 로딩 인디케이터를 먼저 그린 뒤 이미지 로드
       await Future.microtask(() {
         if (mounted) {
