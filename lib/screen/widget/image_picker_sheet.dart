@@ -16,41 +16,30 @@ class _ImagePickerSheetState extends ConsumerState<ImagePickerSheet> {
   List<XFile> _galleryImages = [];
   final Set<int> _selectedIndexes = {};
 
-  bool _loading = false; // 갤러리 picker 대기 중
-  bool _rendering = false; // 💡 이미지 그리드 렌더링 중
-  
-  // 💡 최대 선택 가능 개수 설정
-  final int _maxImageLimit = 30;
+  bool _loading = false; // 로딩 상태 관리
+  final int _maxImageLimit = 30; // 최대 선택 제한
 
   @override
   void initState() {
     super.initState();
-    _loadGallery();
-  }
-
-  Future<void> _loadGallery() async {
-    // 초기 로드 로직 (필요 시 유지)
   }
 
   Future<void> _pickFromGallery() async {
-    // 💡 1. 갤러리를 열기 전 로딩 상태 활성화 - 버튼 누르자마자 즉시 로딩 상태 활성화
-    setState(() => _loading = true);
+    // 💡 누르자마자 즉시 로딩 서클 시작
+    setState(() {
+      _loading = true;
+    });
 
     try {
       final picker = ImagePicker();
-     // limit을 적어도 기기가 무시할 수 있으므로, 아래에서 수동으로 한 번 더 체크합니다.
-      final picked = await picker.pickMultiImage(
-        imageQuality: 85,
-        limit: _maxImageLimit, 
-      );
+      final picked = await picker.pickMultiImage(imageQuality: 85);
 
-      // 아무것도 선택 안 하고 돌아왔을 때
       if (picked.isEmpty) {
         setState(() => _loading = false);
         return;
       }
 
-      // 💡 2. [개수 제한 치트키] 사용자가 30개 넘게 선택해왔다면 강제로 30개만 자르기
+      // 💡 [확실한 개수 제한] 30개 초과 시 즉시 강제 커트
       List<XFile> finalImages = picked;
       if (picked.length > _maxImageLimit) {
         finalImages = picked.sublist(0, _maxImageLimit);
@@ -65,41 +54,24 @@ class _ImagePickerSheetState extends ConsumerState<ImagePickerSheet> {
         }
       }
 
-      // 💡 3. [로딩 바 활성화 치트키] 갤러리에서 복귀 후 렌더링 시작 전 로딩 표시 확실히 켜기
-      setState(() {
-        _rendering = true;
-      });
+      // 💡 이 단계를 거쳐야 UI가 로딩바를 인지하고 스위칭할 시간을 법니다.
+      await Future.delayed(const Duration(milliseconds: 150));
 
-      // 0.1초의 미세한 지연을 주어 UI가 '사진을 불러오는 중...' 화면을 먼저 그리도록 강제합니다.
-      await Future.delayed(const Duration(milliseconds: 100));
-      
-      // 다음 프레임에 이미지 목록 세팅 -> UI가 로딩 인디케이터를 먼저 그린 뒤 이미지 로드
-      await Future.microtask(() {
-        if (mounted) {
-          setState(() {
-            _galleryImages = finalImages;
-            _selectedIndexes.clear();
-            _loading = false; // 목록은 세팅됐지만 렌더링은 아직 진행 중
-          });
-        }
-      });
-
-      // 💡 이미지가 실제로 화면에 그려진 뒤 렌더링 완료 처리
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) setState(() => _rendering = false);
-      });
+      if (mounted) {
+        setState(() {
+          _galleryImages = finalImages;
+          _selectedIndexes.clear();
+          _loading = false; // 데이터 할당 후 로딩 해제
+        });
+      }
 
     } catch (e) {
       if (mounted) {
-        setState(() {
-          _loading = false;
-          _rendering = false;
-        });
+        setState(() => _loading = false);
       }
     }
   }
 
-  // 💡 전체 선택
   void _selectAll() {
     setState(() {
       _selectedIndexes.addAll(List.generate(_galleryImages.length, (i) => i));
@@ -116,7 +88,6 @@ class _ImagePickerSheetState extends ConsumerState<ImagePickerSheet> {
     if (mounted) Navigator.pop(context);
   }
 
-  // 전체선택 여부
   bool get _isAllSelected =>
       _galleryImages.isNotEmpty &&
       _selectedIndexes.length == _galleryImages.length;
@@ -127,6 +98,7 @@ class _ImagePickerSheetState extends ConsumerState<ImagePickerSheet> {
       initialChildSize: 0.75,
       maxChildSize: 0.95,
       minChildSize: 0.4,
+      snap: true, // 💡 시트가 중간에 어정쩡하게 걸리지 않고 딱딱 붙게 만듦
       builder: (_, scrollController) => Container(
         decoration: const BoxDecoration(
           color: Colors.white,
@@ -134,7 +106,7 @@ class _ImagePickerSheetState extends ConsumerState<ImagePickerSheet> {
         ),
         child: Column(
           children: [
-            // 드래그 핸들
+            // 드래그 핸들 (시트 자체를 내릴 수 있는 영역)
             Container(
               margin: const EdgeInsets.symmetric(vertical: 10),
               width: 40,
@@ -149,13 +121,10 @@ class _ImagePickerSheetState extends ConsumerState<ImagePickerSheet> {
               padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
               child: Row(
                 children: [
-                  // 닫기
                   IconButton(
                     icon: Icon(Icons.close, color: Colors.grey.shade600),
                     onPressed: () => Navigator.pop(context),
-                    tooltip: '닫기',
                   ),
-                  // 제목
                   Expanded(
                     child: Text(
                       '사진 선택',
@@ -167,16 +136,14 @@ class _ImagePickerSheetState extends ConsumerState<ImagePickerSheet> {
                       textAlign: TextAlign.center,
                     ),
                   ),
-                  // 갤러리 열기
                   TextButton(
-                    onPressed: (_loading || _rendering) ? null : _pickFromGallery,
+                    onPressed: _loading ? null : _pickFromGallery,
                     child: Text(
-                      '갤러리',
+                      '  갤러리  ',
                       style: TextStyle(color: Colors.indigo.shade600),
                     ),
                   ),
-                  // 💡 전체선택: 이미지 있고 전체 미선택 상태일 때만 표시
-                  if (_galleryImages.isNotEmpty && !_isAllSelected && !_rendering)
+                  if (_galleryImages.isNotEmpty && !_isAllSelected && !_loading)
                     Padding(
                       padding: const EdgeInsets.only(right: 4),
                       child: TextButton(
@@ -187,8 +154,7 @@ class _ImagePickerSheetState extends ConsumerState<ImagePickerSheet> {
                         ),
                       ),
                     ),
-                  // 선택완료
-                  if (_selectedIndexes.isNotEmpty && !_rendering)
+                  if (_selectedIndexes.isNotEmpty && !_loading)
                     Padding(
                       padding: const EdgeInsets.only(right: 8),
                       child: ElevatedButton(
@@ -208,24 +174,16 @@ class _ImagePickerSheetState extends ConsumerState<ImagePickerSheet> {
               ),
             ),
             const Divider(height: 1),
-            // 본문
+            // 본문 영역
             Expanded(
-              child: _loading || _rendering
+              child: _loading
                   ? Center(
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          CircularProgressIndicator(
-                            color: Colors.indigo.shade400,
-                          ),
+                          CircularProgressIndicator(color: Colors.indigo.shade400),
                           const SizedBox(height: 16),
-                          Text(
-                            '사진을 불러오는 중...',
-                            style: TextStyle(
-                              color: Colors.grey.shade500,
-                              fontSize: 14,
-                            ),
-                          ),
+                          const Text('사진을 불러오는 중...', style: TextStyle(color: Colors.grey)),
                         ],
                       ),
                     )
@@ -234,11 +192,7 @@ class _ImagePickerSheetState extends ConsumerState<ImagePickerSheet> {
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              Icon(
-                                Icons.photo_library_outlined,
-                                size: 64,
-                                color: Colors.grey.shade400,
-                              ),
+                              Icon(Icons.photo_library_outlined, size: 64, color: Colors.grey.shade400),
                               const SizedBox(height: 16),
                               Text(
                                 '"갤러리"를 눌러 사진을 불러오세요\n(최대 $_maxImageLimit장)',
@@ -249,6 +203,8 @@ class _ImagePickerSheetState extends ConsumerState<ImagePickerSheet> {
                           ),
                         )
                       : GridView.builder(
+                          // 💡 매우 중요: 시트의 스크롤 컨트롤러를 바인딩하여 
+                          // 리스트 스크롤 시 시트가 닫히는 충돌 현상을 방지합니다.
                           controller: scrollController,
                           padding: const EdgeInsets.all(12),
                           gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(

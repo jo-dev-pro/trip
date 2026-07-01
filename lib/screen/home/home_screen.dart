@@ -29,7 +29,7 @@ class HomeScreen extends ConsumerWidget {
             backgroundColor: Colors.indigo.shade700,
             foregroundColor: Colors.white,
             title: const Text(
-              '나의 여행 다이어리',
+              '나의 여행',
               style: TextStyle(fontWeight: FontWeight.bold),
             ),
             actions: [
@@ -78,8 +78,8 @@ class HomeScreen extends ConsumerWidget {
               indicatorWeight: 3,
               labelStyle: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
               tabs: [
+                Tab(text: '다녀온 여행'),
                 Tab(text: '다가오는 여행'),
-                Tab(text: '지난 추억'),
               ],
             ),
           ),
@@ -131,8 +131,8 @@ class HomeScreen extends ConsumerWidget {
 
     return TabBarView(
       children: [
-        _buildtripListView(upcomingList, isPast: false),
         _buildtripListView(pastList, isPast: true),
+        _buildtripListView(upcomingList, isPast: false),
       ],
     );
   }
