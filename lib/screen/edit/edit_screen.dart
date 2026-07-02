@@ -26,13 +26,16 @@ class _EditScreenState extends ConsumerState<EditScreen> {
   final _titleCtrl = TextEditingController();
   final _noteCtrl = TextEditingController();
   final List<TextEditingController> _themeCtrls = [];
+  
+  // 저장 중 상태를 명확하게 제어하기 위한 로컬 변수
+  bool _isSavingLocal = false;
 
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _initializeControllers();
-    });
+    // 데이터 소스가 위젯 생성 시점에 확실하므로 포스트 프레임 콜백 없이 즉시 초기화하여 
+    // 깜빡임 및 초기 렌더링 지연을 방지합니다.
+    _initializeControllers();
   }
 
   @override
@@ -47,12 +50,11 @@ class _EditScreenState extends ConsumerState<EditScreen> {
   }
 
   void _initializeControllers() {
-    if (!mounted) return;
-
     final trip = widget.tripState.trip;
     final comments = widget.tripState.comments;
     final dailyNotes = widget.tripState.dailyNotes;
 
+    // Riverpod Provider 상태 초기화 (창이 열릴 때 최초 1회)
     ref.read(tripFormProvider.notifier).setTravel(trip, comments, dailyNotes);
 
     _titleCtrl.text = trip.title;
@@ -63,7 +65,6 @@ class _EditScreenState extends ConsumerState<EditScreen> {
 
     if (trip.startDate != null && trip.endDate != null) {
       final days = trip.endDate!.difference(trip.startDate!).inDays + 1;
-
       for (int i = 0; i < days; i++) {
         final currentDay = i + 1;
         final matchedNote = dailyNotes.firstWhere(
@@ -72,8 +73,6 @@ class _EditScreenState extends ConsumerState<EditScreen> {
         );
         _themeCtrls.add(TextEditingController(text: matchedNote.comment));
       }
-
-      if (mounted) setState(() {});
     }
   }
 
@@ -101,9 +100,9 @@ class _EditScreenState extends ConsumerState<EditScreen> {
 
     if (newDays <= 0) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('시작일은 종료일보다 앞서야 합니다.')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('시작일은 종료일보다 앞서야 합니다.')),
+        );
       }
       return;
     }
@@ -113,9 +112,7 @@ class _EditScreenState extends ConsumerState<EditScreen> {
       final bool? confirm = await showDialog<bool>(
         context: context,
         builder: (ctx) => AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           title: const Text(
             '여행 기간 축소 안내',
             style: TextStyle(fontWeight: FontWeight.bold),
@@ -130,13 +127,7 @@ class _EditScreenState extends ConsumerState<EditScreen> {
             ),
             TextButton(
               onPressed: () => Navigator.of(ctx).pop(true),
-              child: const Text(
-                '변경',
-                style: TextStyle(
-                  color: Colors.red,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
+              child: const Text('변경', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
             ),
           ],
         ),
@@ -175,23 +166,46 @@ class _EditScreenState extends ConsumerState<EditScreen> {
     FocusScope.of(context).unfocus();
     if (!_formKey.currentState!.validate()) return;
 
-    final notifier = ref.read(tripFormProvider.notifier);
-    await notifier.save(
-      title: _titleCtrl.text.trim(),
-      place: _placeCtrl.text.trim(),
-      note: _noteCtrl.text.trim(),
-    );
+    setState(() {
+      _isSavingLocal = true;
+    });
 
-    if (mounted) {
-      final tripId = widget.tripState.trip.id;
-      if (tripId != null) {
-        ref.invalidate(tripDetailProvider(tripId));
+    try {
+      final notifier = ref.read(tripFormProvider.notifier);
+      
+      // 💡 [중요] 저장 직전, 컨트롤러에 남아있는 최종 텍스트 값을 상태에 최종 반영합니다.
+      for (int i = 0; i < _themeCtrls.length; i++) {
+        notifier.updateDailyNoteComment(i + 1, _themeCtrls[i].text.trim());
       }
-      Navigator.of(context).pop();
+
+      await notifier.save(
+        title: _titleCtrl.text.trim(),
+        place: _placeCtrl.text.trim(),
+        note: _noteCtrl.text.trim(),
+      );
+
+      if (mounted) {
+        final tripId = widget.tripState.trip.id;
+        if (tripId != null) {
+          ref.invalidate(tripDetailProvider(tripId));
+        }
+        Navigator.of(context).pop();
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('수정 중 오류가 발생했습니다: $e')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSavingLocal = false;
+        });
+      }
     }
   }
 
-  // 💡 isDismissible/enableDrag false → 실수로 닫히지 않게
   void _showImageBottomSheet() {
     showModalBottomSheet(
       context: context,
@@ -208,10 +222,7 @@ class _EditScreenState extends ConsumerState<EditScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text(
-          '여행 일정 삭제',
-          style: TextStyle(fontWeight: FontWeight.bold),
-        ),
+        title: const Text('여행 일정 삭제', style: TextStyle(fontWeight: FontWeight.bold)),
         content: const Text('정말로 이 여행 일정을 삭제하시겠습니까?\n삭제된 데이터는 복구할 수 없습니다.'),
         actions: [
           TextButton(
@@ -220,10 +231,7 @@ class _EditScreenState extends ConsumerState<EditScreen> {
           ),
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(true),
-            child: const Text(
-              '삭제',
-              style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
-            ),
+            child: const Text('삭제', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
           ),
         ],
       ),
@@ -241,9 +249,9 @@ class _EditScreenState extends ConsumerState<EditScreen> {
       Navigator.of(context).popUntil((route) => route.isFirst);
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('삭제 중 오류가 발생했습니다: $e')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('삭제 중 오류가 발생했습니다: $e')),
+      );
     }
   }
 
@@ -253,11 +261,9 @@ class _EditScreenState extends ConsumerState<EditScreen> {
     final notifier = ref.read(tripFormProvider.notifier);
 
     return formState.when(
-      loading: () =>
-          const Scaffold(body: Center(child: CircularProgressIndicator())),
+      loading: () => const Scaffold(body: Center(child: CircularProgressIndicator())),
       error: (err, stack) => Scaffold(body: Center(child: Text('에러 발생: $err'))),
       data: (formValue) {
-        final isSaving = formState.isLoading;
         final currentImages = notifier.currentImages;
         final model = formValue.trip;
 
@@ -266,16 +272,13 @@ class _EditScreenState extends ConsumerState<EditScreen> {
           appBar: AppBar(
             backgroundColor: Colors.indigo.shade700,
             foregroundColor: Colors.white,
-            title: const Text(
-              '여행 일정 수정',
-              style: TextStyle(fontWeight: FontWeight.bold),
-            ),
+            title: const Text('여행 일정 수정', style: TextStyle(fontWeight: FontWeight.bold)),
             elevation: 0,
             actions: [
               IconButton(
                 icon: const Icon(Icons.delete_outline, color: Colors.white),
                 tooltip: '일정 삭제',
-                onPressed: isSaving ? null : _onDelete,
+                onPressed: _isSavingLocal ? null : _onDelete,
               ),
               const SizedBox(width: 8),
             ],
@@ -390,19 +393,18 @@ class _EditScreenState extends ConsumerState<EditScreen> {
                                 ),
                                 Expanded(
                                   child: TextFormField(
+                                    // Key를 부여하여 Rebalance(원소 가감) 시 상태가 꼬이지 않도록 명시합니다.
+                                    key: ValueKey('day_${currentDay}_ctrl'),
                                     controller: _themeCtrls[index],
                                     decoration: InputDecoration(
                                       hintText: '$currentDay일차 핵심 테마 또는 주요 장소',
-                                      contentPadding:
-                                          const EdgeInsets.symmetric(
-                                            horizontal: 12,
-                                            vertical: 10,
-                                          ),
+                                      contentPadding: const EdgeInsets.symmetric(
+                                        horizontal: 12,
+                                        vertical: 10,
+                                      ),
                                       border: OutlineInputBorder(
                                         borderRadius: BorderRadius.circular(10),
-                                        borderSide: BorderSide(
-                                          color: Colors.grey.shade300,
-                                        ),
+                                        borderSide: BorderSide(color: Colors.grey.shade300),
                                       ),
                                       focusedBorder: OutlineInputBorder(
                                         borderRadius: BorderRadius.circular(10),
@@ -412,15 +414,10 @@ class _EditScreenState extends ConsumerState<EditScreen> {
                                         ),
                                       ),
                                     ),
-                                    onChanged: (value) {
-                                      notifier.updateDailyNoteComment(
-                                        currentDay,
-                                        value.trim(),
-                                      );
-                                    },
+                                    // 💡 매 타이핑마다 State를 무겁게 변경하는 대신, 컨트롤러 자체에 위임하고 
+                                    // validation 시점 혹은 최종 save 시점에 일괄 동기화하는 구조가 안전합니다.
                                     validator: (value) {
-                                      if (value == null ||
-                                          value.trim().isEmpty) {
+                                      if (value == null || value.trim().isEmpty) {
                                         return '$currentDay일차 주제를 입력하세요.';
                                       }
                                       return null;
@@ -476,7 +473,6 @@ class _EditScreenState extends ConsumerState<EditScreen> {
                       ],
                     ),
                     if (currentImages.isNotEmpty) ...[
-                      // 💡 coverImagePath + onCoverImageChanged 연결
                       ImageGrid(
                         images: currentImages,
                         onRemove: notifier.removeImage,
@@ -509,7 +505,7 @@ class _EditScreenState extends ConsumerState<EditScreen> {
                   width: double.infinity,
                   height: 52,
                   child: ElevatedButton(
-                    onPressed: isSaving ? null : _onUpdate,
+                    onPressed: _isSavingLocal ? null : _onUpdate,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.indigo.shade700,
                       foregroundColor: Colors.white,
@@ -518,7 +514,7 @@ class _EditScreenState extends ConsumerState<EditScreen> {
                       ),
                       elevation: 2,
                     ),
-                    child: isSaving
+                    child: _isSavingLocal
                         ? const SizedBox(
                             height: 22,
                             width: 22,

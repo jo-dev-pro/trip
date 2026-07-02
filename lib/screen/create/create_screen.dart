@@ -66,39 +66,54 @@ class _CreateScreenState extends ConsumerState<CreateScreen> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      isDismissible: false, // 💡 외부 터치로 닫히지 않게
-      enableDrag: false, // 💡 드래그로 닫히지 않게
+      isDismissible: false, // 외부 터치로 닫히지 않게
+      enableDrag: false, // 드래그로 닫히지 않게
       builder: (_) => const ImagePickerSheet(),
     );
   }
 
   // ──────────── 저장 ────────────
-  Future<void> _onSave() async {
+  Future<void> _onSave(List<dynamic> currentImages) async {
     FocusScope.of(context).unfocus();
 
+    // 1. 기본 Form 검증 (제목, 여행지, 일자별 필수값)
     if (!_formKey.currentState!.validate()) {
       return;
     }
 
-    final notifier = ref.read(tripFormProvider.notifier);
     final formState = ref.read(tripFormProvider);
     final formValue = formState.value;
     final model = formValue?.trip;
 
+    // 2. 날짜 선택 검증
     if (model == null || model.startDate == null || model.endDate == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('여행 기간을 선택해주세요.'),
-          backgroundColor: Colors.orange,
-        ),
-      );
+      _showWarningSnackBar('여행 기간을 선택해주세요.');
       return;
     }
 
-    await notifier.save(
-      title: _titleCtrl.text,
-      place: _placeCtrl.text,
-      note: _noteCtrl.text,
+    // 3. 이미지 필수 선택 검증 (기획 상 이미지 필수 '*' 표시 대응)
+    if (currentImages.isEmpty) {
+      _showWarningSnackBar('최소 한 장 이상의 이미지를 등록해주세요.');
+      return;
+    }
+
+    // 4. 저장 로직 실행
+    await ref
+        .read(tripFormProvider.notifier)
+        .save(
+          title: _titleCtrl.text.trim(),
+          place: _placeCtrl.text.trim(),
+          note: _noteCtrl.text.trim(),
+        );
+  }
+
+  void _showWarningSnackBar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.orange,
+        behavior: SnackBarBehavior.floating,
+      ),
     );
   }
 
@@ -107,8 +122,8 @@ class _CreateScreenState extends ConsumerState<CreateScreen> {
     final formState = ref.watch(tripFormProvider);
     final notifier = ref.read(tripFormProvider.notifier);
 
-    // ✨ 1. 뼈대가 되는 가상 데이터 확인 (notifier 내부 변수 보다는 상태 기반 수급 권장)
-    // 만약 상태(formState.value) 안에 이미지 리스트가 있다면 formState.value?.images 등으로 바꾸는 것이 가장 좋습니다.
+    // ✨ UI 확인 포인트: 멤버 변수 접근 대신 가급적 상태(State)에서 연동하도록 리팩토링 권장
+    // 아래는 우선 기존 비즈니스 로직을 유지하며 연동한 모습입니다.
     final currentImages = notifier.currentImages;
 
     final formValue = formState.value;
@@ -135,7 +150,6 @@ class _CreateScreenState extends ConsumerState<CreateScreen> {
       }
     });
 
-    // 💡 변경 포인트: 최상단에서 전면 차단하는 대신 기본 Scaffold 레이아웃을 유지합니다.
     return GestureDetector(
       onTap: () => FocusScope.of(context).unfocus(),
       child: Scaffold(
@@ -149,12 +163,10 @@ class _CreateScreenState extends ConsumerState<CreateScreen> {
           ),
           elevation: 0,
         ),
-        // 💡 model이 없거나 초기 로딩 중일 때 전체 화면을 날리는 대신 body 안에서만 인디케이터 처리
         body: formState.when(
           loading: () => const Center(child: CircularProgressIndicator()),
           error: (err, stack) => Center(child: Text('에러 발생: $err')),
           data: (state) {
-            // 초기 데이터가 아예 안 만들어진 경우 안전장치
             if (model == null) {
               return const Center(child: Text('데이터를 불러오지 못했습니다.'));
             }
@@ -209,11 +221,17 @@ class _CreateScreenState extends ConsumerState<CreateScreen> {
                       const SizedBox(height: 12),
                       Row(
                         children: [
+                          // ── 시작일 버튼 ──
                           Expanded(
                             child: DateButton(
                               label: '시작일',
                               date: model.startDate,
-                              onTap: () => _pickDate(isStart: true),
+                              // ✨ 화살표(=>) 대신 중괄호({}) 블록으로 감싸 void Function()으로 컴파일러에게 전달합니다.
+                              onTap: isSaving
+                                  ? null
+                                  : () {
+                                      _pickDate(isStart: true);
+                                    },
                             ),
                           ),
                           Padding(
@@ -227,11 +245,17 @@ class _CreateScreenState extends ConsumerState<CreateScreen> {
                               ),
                             ),
                           ),
+                          // ── 종료일 버튼 ──
                           Expanded(
                             child: DateButton(
                               label: '종료일',
                               date: model.endDate,
-                              onTap: () => _pickDate(isStart: false),
+                              // ✨ 종료일 역시 동일하게 중괄호 블록 처리를 하고, 파라미터는 false로 넘겨줍니다.
+                              onTap: isSaving
+                                  ? null
+                                  : () {
+                                      _pickDate(isStart: false);
+                                    },
                             ),
                           ),
                         ],
@@ -257,9 +281,9 @@ class _CreateScreenState extends ConsumerState<CreateScreen> {
                             return _DailyNoteInputRow(
                               key: ValueKey(
                                 'day_${currentDay}_${dailyNotes.length}',
-                              ), // 키값 보강
+                              ),
                               currentDay: currentDay,
-                              initialValue: noteItem.comment,
+                              initialValue: noteItem.comment ?? '',
                               onChanged: (value) {
                                 notifier.updateDailyNoteComment(
                                   currentDay,
@@ -277,7 +301,7 @@ class _CreateScreenState extends ConsumerState<CreateScreen> {
                   // ── 메모 ──
                   SectionCard(
                     children: [
-                      const FieldLabel(text: '메모 *'),
+                      const FieldLabel(text: '메모'),
                       const SizedBox(height: 8),
                       StyledTextField(
                         controller: _noteCtrl,
@@ -296,7 +320,7 @@ class _CreateScreenState extends ConsumerState<CreateScreen> {
                         children: [
                           const FieldLabel(text: '이미지 *'),
                           TextButton.icon(
-                            onPressed: _showImageBottomSheet,
+                            onPressed: isSaving ? null : _showImageBottomSheet,
                             icon: Icon(
                               Icons.add_photo_alternate_outlined,
                               color: Colors.indigo.shade700,
@@ -312,7 +336,6 @@ class _CreateScreenState extends ConsumerState<CreateScreen> {
                           ),
                         ],
                       ),
-                      // 💡 UI 확인 포인트: 수급된 이미지 배열이 비어있지 않다면 리스트 정상 렌더링
                       if (currentImages.isNotEmpty) ...[
                         const SizedBox(height: 12),
                         ImageGrid(
@@ -333,7 +356,7 @@ class _CreateScreenState extends ConsumerState<CreateScreen> {
                     width: double.infinity,
                     height: 52,
                     child: ElevatedButton(
-                      onPressed: isSaving ? null : _onSave,
+                      onPressed: isSaving ? null : () => _onSave(currentImages),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.indigo.shade700,
                         foregroundColor: Colors.white,
@@ -372,10 +395,8 @@ class _CreateScreenState extends ConsumerState<CreateScreen> {
   }
 }
 
-// _DailyNoteInputRow 부분은 기존 코드 유지 (생략)
-
 // ─────────────────────────────────────────────────────────────────────────────
-// 💡 포커스 유실 현상 방지를 위해 분리한 동적 폼 필드 로컬 위젯 (StatefulWidget)
+// 💡 포커스 유실 및 데이터 업데이트 매핑 오류를 방지한 서브 위젯
 // ─────────────────────────────────────────────────────────────────────────────
 class _DailyNoteInputRow extends StatefulWidget {
   final int currentDay;
@@ -400,6 +421,16 @@ class _DailyNoteInputRowState extends State<_DailyNoteInputRow> {
   void initState() {
     super.initState();
     _controller = TextEditingController(text: widget.initialValue);
+  }
+
+  // ✨ 추가된 포인트: 위젯의 상태가 상위 노드에 의해 리빌드될 때 값 동기화 보장
+  @override
+  void didUpdateWidget(covariant _DailyNoteInputRow oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.initialValue != _controller.text &&
+        widget.initialValue != oldWidget.initialValue) {
+      _controller.text = widget.initialValue;
+    }
   }
 
   @override

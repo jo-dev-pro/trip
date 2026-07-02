@@ -1,3 +1,15 @@
+//----------------------------------
+import java.util.Properties
+import java.io.FileInputStream
+
+// 1. key.properties 파일 읽어오기
+val keystoreProperties = Properties()
+val keystorePropertiesFile = rootProject.file("key.properties")
+if (keystorePropertiesFile.exists()) {
+    keystoreProperties.load(FileInputStream(keystorePropertiesFile))
+}
+//----------------------------------
+
 plugins {
     id("com.android.application")
     id("kotlin-android")
@@ -30,10 +42,23 @@ android {
         versionName = flutter.versionName
     }
 
+    //-----------------------------------------
+    // 2. 인증키(Keystore) 설정 주입하기
+    signingConfigs {
+        create("release") {
+            keyAlias = keystoreProperties["keyAlias"] as String?
+            keyPassword = keystoreProperties["keyPassword"] as String?
+            storeFile = keystoreProperties["storeFile"]?.let { file(it) }
+            storePassword = keystoreProperties["storePassword"] as String?
+        }
+    }
+
     buildTypes {
+        debug {
+            // 디버그 모드로 빌드할 때도 내 정식 키(release 설정)를 사용하겠다!
+            signingConfig = signingConfigs.getByName("release")
+        }
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
             signingConfig = signingConfigs.getByName("release")
         }
     }

@@ -21,7 +21,7 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         useMaterial3: true,
         colorSchemeSeed: Colors.indigo,
-        textTheme: GoogleFonts.notoSansKrTextTheme(),
+        fontFamily: 'Pretendard',
       ),
       localizationsDelegates: const [
         GlobalMaterialLocalizations.delegate,
@@ -31,14 +31,14 @@ class MyApp extends StatelessWidget {
       locale: const Locale('ko', 'KR'),
       supportedLocales: const [Locale('ko', 'KR')],
         // 사용자가 폰설정을 바꿔도 내 앱의 글자 크기 고정
-      builder: (context, child) {
-        return MediaQuery(
-          data: MediaQuery.of(
-            context,
-          ).copyWith(textScaler: TextScaler.noScaling),
-          child: child!,
-        );
-      },
+      // builder: (context, child) {
+      //   return MediaQuery(
+      //     data: MediaQuery.of(
+      //       context,
+      //     ).copyWith(textScaler: TextScaler.noScaling),
+      //     child: child!,
+      //   );
+      // },
       routerConfig: JAppRoute.routes,
     );
   }

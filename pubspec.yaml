@@ -87,5 +87,17 @@ flutter_launcher_icons:
 flutter:
   uses-material-design: true
 
-assets:
-  - assets/
+  assets:
+    - assets/
+    - assets/fonts/
+    
+
+  fonts:
+    - family: Pretendard
+      fonts:
+        - asset: assets/fonts/Pretendard-Regular.ttf
+          weight: 400
+        - asset: assets/fonts/Pretendard-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/Pretendard-Bold.ttf
+          weight: 700

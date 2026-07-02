@@ -17,7 +17,6 @@ class _ImagePickerSheetState extends ConsumerState<ImagePickerSheet> {
   final Set<int> _selectedIndexes = {};
 
   bool _loading = false; // 로딩 상태 관리
-  final int _maxImageLimit = 30; // 최대 선택 제한
 
   @override
   void initState() {
@@ -25,7 +24,7 @@ class _ImagePickerSheetState extends ConsumerState<ImagePickerSheet> {
   }
 
   Future<void> _pickFromGallery() async {
-    // 💡 누르자마자 즉시 로딩 서클 시작
+    // 💡 1. 버튼 누르자마자 즉시 로딩 서클 시작
     setState(() {
       _loading = true;
     });
@@ -39,32 +38,17 @@ class _ImagePickerSheetState extends ConsumerState<ImagePickerSheet> {
         return;
       }
 
-      // 💡 [확실한 개수 제한] 30개 초과 시 즉시 강제 커트
-      List<XFile> finalImages = picked;
-      if (picked.length > _maxImageLimit) {
-        finalImages = picked.sublist(0, _maxImageLimit);
-        
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('사진은 최대 $_maxImageLimit장까지만 선택 가능합니다. (초과분 제외)'),
-              duration: const Duration(seconds: 2),
-            ),
-          );
-        }
-      }
-
-      // 💡 이 단계를 거쳐야 UI가 로딩바를 인지하고 스위칭할 시간을 법니다.
+      // 💡 2. 사진이 많을 때 플러터 가상 머신이 UI를 먼저 바꿀 수 있도록 미세한 딜레이 부여
+      // 이 코드가 있어야 '사진을 불러오는 중...' 화면이 씹히지 않고 먼저 확실하게 돕니다.
       await Future.delayed(const Duration(milliseconds: 150));
 
       if (mounted) {
         setState(() {
-          _galleryImages = finalImages;
+          _galleryImages = picked; // 제한 없이 사용자가 선택한 사진 모두 할당
           _selectedIndexes.clear();
-          _loading = false; // 데이터 할당 후 로딩 해제
+          _loading = false; // 이미지 로드 완료 후 로딩 해제
         });
       }
-
     } catch (e) {
       if (mounted) {
         setState(() => _loading = false);
@@ -98,7 +82,7 @@ class _ImagePickerSheetState extends ConsumerState<ImagePickerSheet> {
       initialChildSize: 0.75,
       maxChildSize: 0.95,
       minChildSize: 0.4,
-      snap: true, // 💡 시트가 중간에 어정쩡하게 걸리지 않고 딱딱 붙게 만듦
+      snap: true, // 시트가 중간에 걸리지 않고 부드럽게 고정
       builder: (_, scrollController) => Container(
         decoration: const BoxDecoration(
           color: Colors.white,
@@ -162,7 +146,10 @@ class _ImagePickerSheetState extends ConsumerState<ImagePickerSheet> {
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.indigo.shade700,
                           foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 8,
+                          ),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(8),
                           ),
@@ -181,85 +168,93 @@ class _ImagePickerSheetState extends ConsumerState<ImagePickerSheet> {
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          CircularProgressIndicator(color: Colors.indigo.shade400),
+                          CircularProgressIndicator(
+                            color: Colors.indigo.shade400,
+                          ),
                           const SizedBox(height: 16),
-                          const Text('사진을 불러오는 중...', style: TextStyle(color: Colors.grey)),
+                          const Text(
+                            '사진을 불러오는 중...',
+                            style: TextStyle(color: Colors.grey),
+                          ),
                         ],
                       ),
                     )
                   : _galleryImages.isEmpty
-                      ? Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(Icons.photo_library_outlined, size: 64, color: Colors.grey.shade400),
-                              const SizedBox(height: 16),
-                              Text(
-                                '"갤러리"를 눌러 사진을 불러오세요\n(최대 $_maxImageLimit장)',
-                                textAlign: TextAlign.center,
-                                style: TextStyle(color: Colors.grey.shade500),
-                              ),
-                            ],
+                  ? Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.photo_library_outlined,
+                            size: 64,
+                            color: Colors.grey.shade400,
                           ),
-                        )
-                      : GridView.builder(
-                          // 💡 매우 중요: 시트의 스크롤 컨트롤러를 바인딩하여 
-                          // 리스트 스크롤 시 시트가 닫히는 충돌 현상을 방지합니다.
-                          controller: scrollController,
-                          padding: const EdgeInsets.all(12),
-                          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                          const SizedBox(height: 16),
+                          Text(
+                            '"갤러리"를 눌러 사진을 불러오세요',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(color: Colors.grey.shade500),
+                          ),
+                        ],
+                      ),
+                    )
+                  : GridView.builder(
+                      controller: scrollController,
+                      padding: const EdgeInsets.all(12),
+                      gridDelegate:
+                          const SliverGridDelegateWithFixedCrossAxisCount(
                             crossAxisCount: 3,
                             crossAxisSpacing: 6,
                             mainAxisSpacing: 6,
                           ),
-                          itemCount: _galleryImages.length,
-                          itemBuilder: (_, i) {
-                            final isSelected = _selectedIndexes.contains(i);
-                            return GestureDetector(
-                              onTap: () {
-                                setState(() {
-                                  if (isSelected) {
-                                    _selectedIndexes.remove(i);
-                                  } else {
-                                    _selectedIndexes.add(i);
-                                  }
-                                });
-                              },
-                              child: Stack(
-                                fit: StackFit.expand,
-                                children: [
-                                  ClipRRect(
+                      itemCount: _galleryImages.length,
+                      itemBuilder: (_, i) {
+                        final isSelected = _selectedIndexes.contains(i);
+                        return GestureDetector(
+                          onTap: () {
+                            setState(() {
+                              if (isSelected) {
+                                _selectedIndexes.remove(i);
+                              } else {
+                                _selectedIndexes.add(i);
+                              }
+                            });
+                          },
+                          child: Stack(
+                            fit: StackFit.expand,
+                            children: [
+                              ClipRRect(
+                                borderRadius: BorderRadius.circular(8),
+                                child: Image.file(
+                                  File(_galleryImages[i].path),
+                                  fit: BoxFit.cover,
+                                  cacheWidth: 300,
+                                  cacheHeight: 300,
+                                ),
+                              ),
+                              if (isSelected)
+                                Container(
+                                  decoration: BoxDecoration(
+                                    color: Colors.indigo.withOpacity(0.4),
                                     borderRadius: BorderRadius.circular(8),
-                                    child: Image.file(
-                                      File(_galleryImages[i].path),
-                                      fit: BoxFit.cover,
-                                      cacheWidth: 300,
-                                      cacheHeight: 300,
+                                    border: Border.all(
+                                      color: Colors.indigo.shade600,
+                                      width: 2.5,
                                     ),
                                   ),
-                                  if (isSelected)
-                                    Container(
-                                      decoration: BoxDecoration(
-                                        color: Colors.indigo.withOpacity(0.4),
-                                        borderRadius: BorderRadius.circular(8),
-                                        border: Border.all(
-                                          color: Colors.indigo.shade600,
-                                          width: 2.5,
-                                        ),
-                                      ),
-                                      child: const Center(
-                                        child: Icon(
-                                          Icons.check_circle,
-                                          color: Colors.white,
-                                          size: 32,
-                                        ),
-                                      ),
+                                  child: const Center(
+                                    child: Icon(
+                                      Icons.check_circle,
+                                      color: Colors.white,
+                                      size: 32,
                                     ),
-                                ],
-                              ),
-                            );
-                          },
-                        ),
+                                  ),
+                                ),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
             ),
           ],
         ),
