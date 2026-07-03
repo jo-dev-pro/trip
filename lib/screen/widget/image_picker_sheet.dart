@@ -235,7 +235,7 @@ class _ImagePickerSheetState extends ConsumerState<ImagePickerSheet> {
                               if (isSelected)
                                 Container(
                                   decoration: BoxDecoration(
-                                    color: Colors.indigo.withOpacity(0.4),
+                                    color: Colors.indigo.withValues(alpha:0.4),
                                     borderRadius: BorderRadius.circular(8),
                                     border: Border.all(
                                       color: Colors.indigo.shade600,

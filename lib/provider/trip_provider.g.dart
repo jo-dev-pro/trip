@@ -85,7 +85,7 @@ final class TripFormNotifierProvider
   }
 }
 
-String _$tripFormNotifierHash() => r'd35c1cce8862a38357aaf72f91d1423c09cf355a';
+String _$tripFormNotifierHash() => r'8dd57c93b80b31dc495620131741daec98cef343';
 
 abstract class _$TripFormNotifier extends $Notifier<AsyncValue<TripFormState>> {
   AsyncValue<TripFormState> build();

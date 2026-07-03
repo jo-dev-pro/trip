@@ -283,7 +283,7 @@ class _CreateScreenState extends ConsumerState<CreateScreen> {
                                 'day_${currentDay}_${dailyNotes.length}',
                               ),
                               currentDay: currentDay,
-                              initialValue: noteItem.comment ?? '',
+                              initialValue: noteItem.comment,
                               onChanged: (value) {
                                 notifier.updateDailyNoteComment(
                                   currentDay,

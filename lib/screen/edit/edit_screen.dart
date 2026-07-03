@@ -54,9 +54,15 @@ class _EditScreenState extends ConsumerState<EditScreen> {
     final comments = widget.tripState.comments;
     final dailyNotes = widget.tripState.dailyNotes;
 
-    // Riverpod Provider 상태 초기화 (창이 열릴 때 최초 1회)
-    ref.read(tripFormProvider.notifier).setTravel(trip, comments, dailyNotes);
+    // 🎯 [수정]: addPostFrameCallback으로 감싸 빌드 사이클과의 충돌을 원천 차단합니다.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        ref.read(tripFormProvider.notifier).setTravel(trip, comments, dailyNotes);
+      }
+    });
 
+    // 💡 컨트롤러의 글자 세팅은 로컬 변수 조작이므로 빌드 충돌과 무관하여 
+    // 화면 깜빡임을 방지하기 위해 콜백 바깥에서 즉시 수행하는 것이 좋습니다.
     _titleCtrl.text = trip.title;
     _placeCtrl.text = trip.place;
     _noteCtrl.text = trip.note ?? '';

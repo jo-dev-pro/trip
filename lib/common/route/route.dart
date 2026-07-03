@@ -5,5 +5,6 @@ class JRoutes {
   static String edit = '/edit';
   static String detail = '/detail';
   static String backup = '/backup';
+  static String setting = '/setting';
 
 }

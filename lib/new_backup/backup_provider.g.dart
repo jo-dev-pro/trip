@@ -1,6 +1,6 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
 
-part of 'onpop_invoked_provider.dart';
+part of 'backup_provider.dart';
 
 // **************************************************************************
 // RiverpodGenerator
@@ -9,51 +9,50 @@ part of 'onpop_invoked_provider.dart';
 // GENERATED CODE - DO NOT MODIFY BY HAND
 // ignore_for_file: type=lint, type=warning
 
-@ProviderFor(JOnPopInvoked)
-final jOnPopInvokedProvider = JOnPopInvokedProvider._();
+@ProviderFor(Backup)
+final backupProvider = BackupProvider._();
 
-final class JOnPopInvokedProvider
-    extends $NotifierProvider<JOnPopInvoked, bool> {
-  JOnPopInvokedProvider._()
+final class BackupProvider extends $NotifierProvider<Backup, BackupState> {
+  BackupProvider._()
     : super(
         from: null,
         argument: null,
         retry: null,
-        name: r'jOnPopInvokedProvider',
+        name: r'backupProvider',
         isAutoDispose: true,
         dependencies: null,
         $allTransitiveDependencies: null,
       );
 
   @override
-  String debugGetCreateSourceHash() => _$jOnPopInvokedHash();
+  String debugGetCreateSourceHash() => _$backupHash();
 
   @$internal
   @override
-  JOnPopInvoked create() => JOnPopInvoked();
+  Backup create() => Backup();
 
   /// {@macro riverpod.override_with_value}
-  Override overrideWithValue(bool value) {
+  Override overrideWithValue(BackupState value) {
     return $ProviderOverride(
       origin: this,
-      providerOverride: $SyncValueProvider<bool>(value),
+      providerOverride: $SyncValueProvider<BackupState>(value),
     );
   }
 }
 
-String _$jOnPopInvokedHash() => r'c60779faeaf492cf24f63cc561c04322913de2a8';
+String _$backupHash() => r'fc67c409da58a788ff209f136b7304edcc2572e4';
 
-abstract class _$JOnPopInvoked extends $Notifier<bool> {
-  bool build();
+abstract class _$Backup extends $Notifier<BackupState> {
+  BackupState build();
   @$mustCallSuper
   @override
   void runBuild() {
-    final ref = this.ref as $Ref<bool, bool>;
+    final ref = this.ref as $Ref<BackupState, BackupState>;
     final element =
         ref.element
             as $ClassProviderElement<
-              AnyNotifier<bool, bool>,
-              bool,
+              AnyNotifier<BackupState, BackupState>,
+              BackupState,
               Object?,
               Object?
             >;

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../provider/trip_detail_state.dart';
+import '../../screen/settings/settings_screen.dart';
 import '../../screen/edit/edit_screen.dart';
 import '../../screen/home/detail/detail.dart';
 import '../../screen/home/home_screen.dart';
@@ -43,6 +44,11 @@ class JAppRoute {
         path: JRoutes.backup,
         name: JRoutes.backup,
         builder: (context, state) => const BackupRestoreScreen(),
+      ),
+      GoRoute(
+        path: JRoutes.setting,
+        name: JRoutes.setting,
+        builder: (context, state) => const SettingsScreen(),
       ),
     ],
   );

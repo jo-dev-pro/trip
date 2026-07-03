@@ -57,16 +57,17 @@ class HomeScreen extends ConsumerWidget {
               ),
               // 기존 백업 버튼
               GestureDetector(
+                onTap: () => context.pushNamed(JRoutes.setting),
                 child: CircleAvatar(
-                  backgroundColor: Colors.grey.withValues(alpha: 0.8),
+                  // 💡 화이트에 약간의 투명도를 주어 앱바 색상이 자연스럽게 투영되도록 합니다.
+                  backgroundColor: Colors.white.withValues(alpha: 0.2),
                   radius: 20,
-                  child: Icon(
-                    Icons.settings_backup_restore_outlined,
-                    color: Colors.indigo.shade800,
+                  child: const Icon(
+                    Icons.settings_outlined,
+                    color: Colors.white, // 💡 아이콘은 선명한 화이트로 변경
                     size: 22,
                   ),
                 ),
-                onTap: () => context.pushNamed(JRoutes.backup),
               ),
               const SizedBox(width: 10),
             ],
@@ -147,6 +148,8 @@ class HomeScreen extends ConsumerWidget {
         ),
       );
     }
+    // 마지막 카드에 하단 간격 조정
+    int totalCount = items.length;
 
     return ListView.builder(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
@@ -181,8 +184,10 @@ class HomeScreen extends ConsumerWidget {
           }
         }
 
+        double bottomMargin = (index == totalCount - 1) ? 40 : 16;
+
         return Card(
-          margin: const EdgeInsets.only(bottom: 16),
+          margin: EdgeInsets.only(bottom: bottomMargin),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
           ),
@@ -270,7 +275,6 @@ class HomeScreen extends ConsumerWidget {
                       if (trip.note != null && trip.note!.isNotEmpty) ...[
                         const SizedBox(height: 12),
                         Divider(color: Colors.grey.shade100, height: 1),
-                        const SizedBox(height: 12),
                         Text(
                           trip.note!,
                           style: TextStyle(

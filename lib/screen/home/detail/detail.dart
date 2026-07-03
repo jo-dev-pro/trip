@@ -160,7 +160,7 @@ class DetailScreen extends ConsumerWidget {
                           borderRadius: BorderRadius.circular(14),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withOpacity(0.03),
+                              color: Colors.black.withValues(alpha: 0.03),
                               blurRadius: 8,
                               offset: const Offset(0, 2),
                             ),
@@ -240,7 +240,7 @@ class DetailScreen extends ConsumerWidget {
                             border: Border.all(color: Colors.grey.shade200),
                             boxShadow: [
                               BoxShadow(
-                                color: Colors.black.withOpacity(0.02),
+                                color: Colors.black.withValues(alpha:0.02),
                                 blurRadius: 6,
                                 offset: const Offset(0, 2),
                               ),
@@ -322,7 +322,7 @@ class DetailScreen extends ConsumerWidget {
                                 ),
                                 boxShadow: [
                                   BoxShadow(
-                                    color: Colors.indigo.withOpacity(0.3),
+                                    color: Colors.indigo.withValues(alpha:0.3),
                                     blurRadius: 4,
                                   ),
                                 ],
@@ -342,7 +342,7 @@ class DetailScreen extends ConsumerWidget {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                'Day $dayCount - $dayString',
+                                '$dayCount일차 - $dayString',
                                 style: TextStyle(
                                   fontSize: 15,
                                   fontWeight: FontWeight.bold,
@@ -377,7 +377,7 @@ class DetailScreen extends ConsumerWidget {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         const Text(
-                          '등록된 여행 사진 & 기록',
+                          '여행 사진 & 기록',
                           style: TextStyle(
                             fontSize: 17,
                             fontWeight: FontWeight.bold,
@@ -475,7 +475,7 @@ class DetailScreen extends ConsumerWidget {
           borderRadius: BorderRadius.circular(14),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.04),
+              color: Colors.black.withValues(alpha:0.04),
               blurRadius: 6,
               offset: const Offset(0, 2),
             ),
