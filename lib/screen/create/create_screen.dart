@@ -446,7 +446,7 @@ class _DailyNoteInputRowState extends State<_DailyNoteInputRow> {
       child: Row(
         children: [
           Container(
-            width: 55,
+            width: 63,
             alignment: Alignment.centerLeft,
             child: Text(
               '${widget.currentDay}일차 :',
@@ -459,8 +459,12 @@ class _DailyNoteInputRowState extends State<_DailyNoteInputRow> {
           Expanded(
             child: TextFormField(
               controller: _controller,
+              style: const TextStyle(fontSize: 15),
               decoration: InputDecoration(
                 hintText: '${widget.currentDay}일차 핵심 테마 또는 주요 장소',
+                hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 14),
+                filled: true,
+                fillColor: const Color(0xFFF4F6FA),
                 contentPadding: const EdgeInsets.symmetric(
                   horizontal: 12,
                   vertical: 10,

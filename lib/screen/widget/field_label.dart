@@ -10,7 +10,7 @@ class FieldLabel extends StatelessWidget {
     return Text(
       text,
       style: TextStyle(
-        fontSize: 13,
+        fontSize: 15,
         fontWeight: FontWeight.w600,
         color: Colors.grey.shade600,
         letterSpacing: 0.3,
