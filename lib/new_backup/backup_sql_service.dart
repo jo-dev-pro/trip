@@ -2,36 +2,23 @@ import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
 
 class BackupSqlService {
-  static final BackupSqlService instance =
-      BackupSqlService._instance();
-  final Map<String, Database> _databases = {};
-
+  static final BackupSqlService instance = BackupSqlService._instance();
   BackupSqlService._instance();
-
   factory BackupSqlService() => instance;
 
-  /// 기존 로컬 스마트폰에 있는 DB 파일을 안전하게 연결(Open)하는 기능
+  Database? _database;
+
+  /// 데이터베이스 인스턴스를 싱글톤으로 안전하게 가져옵니다.
   Future<Database> getDB(String dbName) async {
+    // 💡 이미 연결이 열려 있다면 기존 연결을 그대로 반환합니다. (불필요한 close/open 방지)
+    if (_database != null && _database!.isOpen) {
+      return _database!;
+    }
+
     var databasesPath = await getDatabasesPath();
     var dbPath = join(databasesPath, '$dbName.db');
 
-    // 안전장치: 기존에 서비스 내부 맵에 동일한 커넥션이 열려 있다면 닫아줍니다.
-    if (_databases[dbName] != null && _databases[dbName]!.isOpen) {
-      await _databases[dbName]!.close();
-    }
-
-    final db = await openDatabase(dbPath, readOnly: false);
-    _databases[dbName] = db;
-    return db;
-  }
-
-  /// 복원(Restore) 덮어쓰기 전 안전하게 기존 커넥션을 해제하는 유틸
-  Future<void> closeDatabase(String dbName) async {
-    if (_databases.containsKey(dbName)) {
-      if (_databases[dbName] != null && _databases[dbName]!.isOpen) {
-        await _databases[dbName]!.close();
-      }
-      _databases.remove(dbName);
-    }
+    _database = await openDatabase(dbPath, readOnly: false);
+    return _database!;
   }
 }

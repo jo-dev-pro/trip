@@ -6,7 +6,6 @@ import '../../screen/settings/settings_screen.dart';
 import '../../screen/edit/edit_screen.dart';
 import '../../screen/home/detail/detail.dart';
 import '../../screen/home/home_screen.dart';
-import '../../backup_restore/backup_restore_screen.dart';
 import 'route.dart';
 
 class JAppRoute {
@@ -39,11 +38,6 @@ class JAppRoute {
           // 💡 캐스팅한 객체를 생성자에 그대로 전달합니다.
           return EditScreen(tripState: tripState);
         },
-      ),
-      GoRoute(
-        path: JRoutes.backup,
-        name: JRoutes.backup,
-        builder: (context, state) => const BackupRestoreScreen(),
       ),
       GoRoute(
         path: JRoutes.setting,
