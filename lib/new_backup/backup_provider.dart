@@ -165,9 +165,103 @@ class Backup extends _$Backup {
     }
 
     final filePath = result.files.single.path!;
+    final db = await _sqlService.getDB(dbName);
 
-    // TODO: 선택된 파일 기점으로 압축 해제 및 데이터 파싱 복원 구현
+    // 2. 임시 디렉토리에 압축 풀기
+    final tempDir = await getTemporaryDirectory();
+    final decodeDir = Directory(join(tempDir.path, 'restore_temp'));
+    if (await decodeDir.exists()) await decodeDir.delete(recursive: true);
+    await decodeDir.create(recursive: true);
 
-    return '데이터 복원 기능이 호출되었습니다. (선택 파일: ${basename(filePath)})';
+    final bytes = File(filePath).readAsBytesSync();
+    final archive = ZipDecoder().decodeBytes(bytes);
+
+    for (final file in archive) {
+      final filename = file.name;
+      if (file.isFile) {
+        final data = file.content as List<int>;
+        File(join(decodeDir.path, filename))
+          ..createSync(recursive: true)
+          ..writeAsBytesSync(data);
+      }
+    }
+
+    // 3. 내부에서 엑셀 파일 찾기
+    final entities = await decodeDir.list().toList();
+    File? excelFile;
+    for (var entity in entities) {
+      if (entity is File && extension(entity.path) == '.xlsx') {
+        excelFile = entity;
+        break;
+      }
+    }
+
+    if (excelFile == null) {
+      return '백업 파일 내에서 엑셀 데이터를 찾을 수 없습니다.';
+    }
+
+    // 4. 🌟 [핵심] 트랜잭션을 열고 기존 데이터 통째로 날린 후 복원 진행 🌟
+    // 트랜잭션을 쓰면 복원 도중 에러가 나도 기존 데이터가 깨지지 않고 안전하게 롤백됩니다.
+    await db.transaction((txn) async {
+      List<String> tables = ['trip', 'comment', 'daily_note'];
+
+      // ⚠️ 아까 등록한 새 데이터를 지우기 위해 기존 테이블 데이터 청소
+      for (String tableName in tables) {
+        await txn.execute("DELETE FROM $tableName"); 
+        // 만약 Auto Increment (id 자동증가) 초기화가 필요하다면 아래 줄도 실행
+        await txn.execute("DELETE FROM sqlite_sequence WHERE name='$tableName'");
+      }
+
+      // 5. 엑셀 파일 읽어서 DB에 삽입하기
+      var bytes = excelFile!.readAsBytesSync();
+      var excel = Excel.decodeBytes(bytes);
+
+      for (String tableName in tables) {
+        if (!excel.sheets.containsKey(tableName)) continue;
+        var sheet = excel[tableName];
+        if (sheet.maxRows <= 1) continue; // 헤더만 있거나 빈 시트 패스
+
+        // 첫 번째 행에서 컬럼명(헤더) 추출
+        List<String> headers = sheet.rows.first.map((cell) => cell?.value?.toString() ?? '').toList();
+
+        // 두 번째 행부터 데이터 꺼내서 Insert
+        for (int i = 1; i < sheet.maxRows; i++) {
+          var row = sheet.rows[i];
+          Map<String, dynamic> rowMap = {};
+          
+          for (int j = 0; j < headers.length; j++) {
+            if (headers[j].isEmpty) continue;
+            var cellValue = row[j]?.value;
+            rowMap[headers[j]] = cellValue?.toString();
+          }
+
+          // 비어있지 않은 데이터만 삽입
+          if (rowMap.isNotEmpty) {
+            await txn.insert(tableName, rowMap);
+          }
+        }
+      }
+    });
+
+    // 6. 이미지 폴더 복구 (기존 이미지 폴더 지우고 압축 해제된 이미지로 교체)
+    final appDocDir = await getApplicationDocumentsDirectory();
+    Directory targetImgDir = Directory(join(appDocDir.path, 'trip_images'));
+    Directory sourceImgDir = Directory(join(decodeDir.path, 'trip_images'));
+
+    if (await sourceImgDir.exists()) {
+      if (await targetImgDir.exists()) await targetImgDir.delete(recursive: true);
+      await targetImgDir.create(recursive: true);
+
+      await for (var file in sourceImgDir.list(recursive: false)) {
+        if (file is File) {
+          await file.copy(join(targetImgDir.path, basename(file.path)));
+        }
+      }
+    }
+
+    // 7. 사용한 임시 폴더 삭제
+    await decodeDir.delete(recursive: true);
+
+    return '데이터 및 이미지 복원이 성공적으로 완료되었습니다.';
   }
 }
