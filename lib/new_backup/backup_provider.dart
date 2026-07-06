@@ -64,13 +64,13 @@ class Backup extends _$Backup {
     }
   }
 
-  /// ── 💾 [내보내기] 안전한 임시 폴더에 압축(ZIP) 생성 후 공유 창 열기 ──
+  /// ── 💾 [내보내기 수정본] 엑셀과 이미지를 깨짐 없이 정밀하게 ZIP으로 묶어 공유 ──
   Future<String> _backupAndShare(String dbName) async {
     final db = await _sqlService.getDB(dbName);
     var excel = Excel.createExcel();
     String defaultSheet = excel.getDefaultSheet() ?? 'Sheet1';
 
-    // 엑셀 데이터 추출 및 시트별 작성
+    // 1. 엑셀 데이터 추출 및 시트 작성
     List<String> tables = ['trip', 'comment', 'daily_note'];
 
     for (String tableName in tables) {
@@ -102,49 +102,54 @@ class Backup extends _$Backup {
       excel.delete(defaultSheet);
     }
 
-    // 외부 권한이 필요 없는 안전한 앱 전용 임시 디렉토리(Cache) 확보
-    final tempDir = await getTemporaryDirectory();
-    final nowStr = DateFormat('yyyyMMdd_HHmm').format(DateTime.now());
-    
-    // 백업 파일을 모아둘 임시 작업 폴더 생성
-    final backupWorkingDir = Directory(join(tempDir.path, 'trip_backup_$nowStr'));
-    await backupWorkingDir.create(recursive: true);
+    // 🌟 2. 가상 압축 아카이브(Archive) 생성 (물리 폴더 복사 방식 탈피)
+    var archive = Archive();
 
-    // 생성된 엑셀 파일을 임시 백업 폴더 내부에 쓰기
-    String excelPath = join(backupWorkingDir.path, 'trip_backup_$nowStr.xlsx');
-    var fileBytes = excel.save();
-    if (fileBytes != null) {
-      await File(excelPath).writeAsBytes(fileBytes);
+    // 🌟 3. 엑셀 파일 안전하게 바이트로 변환 후 아카이브에 직렬화 삽입
+    var excelBytes = excel.save();
+    if (excelBytes != null) {
+      // 압축 파일 풀었을 때 최상위에 바로 보이도록 배치
+      archive.addFile(ArchiveFile(
+        'trip_backup.xlsx', 
+        excelBytes.length, 
+        excelBytes,
+      ));
     }
 
-    // 이미지 폴더(trip_images)를 임시 백업 폴더 안으로 복사
+    // 🌟 4. 이미지 폴더(trip_images) 내부 파일들을 바이트 단위로 직접 아카이브에 주입
     final appDocDir = await getApplicationDocumentsDirectory();
     Directory sourceImgDir = Directory(join(appDocDir.path, 'trip_images'));
 
     if (await sourceImgDir.exists()) {
-      Directory targetImgDir = Directory(join(backupWorkingDir.path, 'trip_images'));
-      await targetImgDir.create(recursive: true);
-
-      await for (var file in sourceImgDir.list(recursive: false)) {
+      List<FileSystemEntity> files = sourceImgDir.listSync(recursive: false);
+      
+      for (var file in files) {
         if (file is File) {
-          await file.copy(join(targetImgDir.path, basename(file.path)));
+          List<int> imgBytes = await file.readAsBytes();
+          String imgName = basename(file.path);
+          
+          // 압축 파일 내부에 'trip_images/사진명.jpg' 형태로 구조 정의
+          archive.addFile(ArchiveFile(
+            'trip_images/$imgName', 
+            imgBytes.length, 
+            imgBytes,
+          ));
         }
       }
     }
 
-    // 엑셀 + 이미지가 함께 묶인 폴더를 하나의 ZIP 파일로 최종 압축
-    final encoder = ZipFileEncoder();
+    // 🌟 5. 아카이브를 최종 단일 .zip 파일 바이너리로 인코딩 및 디스크 저장
+    final tempDir = await getTemporaryDirectory();
+    final nowStr = DateFormat('yyyyMMdd_HHmm').format(DateTime.now());
     String zipPath = join(tempDir.path, 'trip_backup_$nowStr.zip');
-    encoder.create(zipPath);
-    await encoder.addDirectory(backupWorkingDir);
-    encoder.close();
 
-    // 용량 최적화를 위해 역할을 마친 임시 작업 폴더는 삭제
-    if (await backupWorkingDir.exists()) {
-      await backupWorkingDir.delete(recursive: true);
+    var zipBytes = ZipEncoder().encode(archive);
+    if (zipBytes != null) {
+      final zipFile = File(zipPath);
+      await zipFile.writeAsBytes(zipBytes, flush: true); // 💡 flush: true로 데이터 누수 방지
     }
 
-    // 시스템 공유 허브를 호출하여 구글 드라이브, 카카오톡 등으로 전송
+    // 6. 시스템 공유 허브 호출 (구글 드라이브 전송)
     await Share.shareXFiles(
       [XFile(zipPath)],
       subject: '여행 통합 데이터 백업 $nowStr',
