@@ -40,7 +40,7 @@ final class BackupProvider extends $NotifierProvider<Backup, BackupState> {
   }
 }
 
-String _$backupHash() => r'd37c8363f1128b8a41e1a293c0ef484ce36a33f0';
+String _$backupHash() => r'bffa4b1fc07408239deb47c404f92754b25acbec';
 
 abstract class _$Backup extends $Notifier<BackupState> {
   BackupState build();
