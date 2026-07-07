@@ -10,7 +10,7 @@ import 'package:share_plus/share_plus.dart'; // 공유 창 실행용 패키지
 import 'package:file_picker/file_picker.dart'; // 복원 파일 선택용 패키지
 
 import 'backup_sql_service.dart';
-import 'backup_state.dart'; // 제공해주신 새로운 State 파일 임포트
+import 'backup_state.dart';
 
 part 'backup_provider.g.dart';
 
@@ -20,7 +20,6 @@ class Backup extends _$Backup {
 
   @override
   BackupState build() {
-    // 초기 상태 설정
     return BackupState(
       isLoading: false,
       message: null,
@@ -30,9 +29,7 @@ class Backup extends _$Backup {
 
   /// ── 🎛️ 백업 및 복원 통합 컨트롤러 ──
   Future<bool> dbBackupRestore(String type, BuildContext context) async {
-    // 1. 로딩 시작 및 기존 메시지 초기화
     state = state.copyWith(isLoading: true, message: null, errorMessage: null);
-
     const String dbName = 'trip_db'; 
 
     try {
@@ -45,26 +42,22 @@ class Backup extends _$Backup {
       }
 
       if (resultMsg.contains('취소') || resultMsg.contains('선택하지 않았습니다')) {
-        // 2. 취소 시 로딩 해제 및 안내 메시지 반영
         state = state.copyWith(isLoading: false, message: resultMsg);
         return false;
       }
 
       if (!ref.mounted) return false;
 
-      // 3. 성공 시 로딩 해제 및 완료 메시지 반영
       state = state.copyWith(isLoading: false, message: resultMsg);
       return true;
     } catch (e) {
       String errorMessage = e.toString().replaceAll('Exception: ', '');
-      
-      // 4. 에러 발생 시 로딩 해제 및 에러 메시지 반영
       state = state.copyWith(isLoading: false, errorMessage: errorMessage);
       return false;
     }
   }
 
-  /// ── 💾 [내보내기 수정본] 엑셀과 이미지를 깨짐 없이 정밀하게 ZIP으로 묶어 공유 ──
+  /// ── 💾 [내보내기] 데이터 안정성 확보 및 인메모리 압축 ──
   Future<String> _backupAndShare(String dbName) async {
     final db = await _sqlService.getDB(dbName);
     var excel = Excel.createExcel();
@@ -102,67 +95,73 @@ class Backup extends _$Backup {
       excel.delete(defaultSheet);
     }
 
-    // 🌟 2. 가상 압축 아카이브(Archive) 생성 (물리 폴더 복사 방식 탈피)
-    var archive = Archive();
-
-    // 🌟 3. 엑셀 파일 안전하게 바이트로 변환 후 아카이브에 직렬화 삽입
-    var excelBytes = excel.save();
-    if (excelBytes != null) {
-      // 압축 파일 풀었을 때 최상위에 바로 보이도록 배치
-      archive.addFile(ArchiveFile(
-        'trip_backup.xlsx', 
-        excelBytes.length, 
-        excelBytes,
-      ));
+    // 🌟 2. 엑셀 인코딩 데이터를 메모리에 즉시 고정 (깨짐 방지 핵심)
+    final List<int>? excelBytes = excel.encode(); 
+    if (excelBytes == null || excelBytes.isEmpty) {
+      throw Exception('엑셀 데이터 인코딩에 실패했습니다.');
     }
 
-    // 🌟 4. 이미지 폴더(trip_images) 내부 파일들을 바이트 단위로 직접 아카이브에 주입
+    // 3. 가상 압축 파일(Archive) 저장소 개설
+    var archive = Archive();
+
+    // 🌟 4. 껍데기가 아닌 진짜 데이터 바이트를 압축 파일에 주입
+    archive.addFile(ArchiveFile(
+      'trip_backup.xlsx', // 내부 파일명 지정
+      excelBytes.length,
+      excelBytes,
+    ));
+
+    // 5. 이미지 폴더 백업 처리 (물리 파일 동기화 방식)
     final appDocDir = await getApplicationDocumentsDirectory();
     Directory sourceImgDir = Directory(join(appDocDir.path, 'trip_images'));
 
     if (await sourceImgDir.exists()) {
+      // 디렉토리 내 모든 파일을 동기식으로 안전하게 리스팅
       List<FileSystemEntity> files = sourceImgDir.listSync(recursive: false);
       
       for (var file in files) {
         if (file is File) {
-          List<int> imgBytes = await file.readAsBytes();
-          String imgName = basename(file.path);
-          
-          // 압축 파일 내부에 'trip_images/사진명.jpg' 형태로 구조 정의
-          archive.addFile(ArchiveFile(
-            'trip_images/$imgName', 
-            imgBytes.length, 
-            imgBytes,
-          ));
+          List<int> imgBytes = file.readAsBytesSync(); // 동기식 바이너리 로드
+          if (imgBytes.isNotEmpty) {
+            String imgName = basename(file.path);
+            archive.addFile(ArchiveFile(
+              'trip_images/$imgName', 
+              imgBytes.length, 
+              imgBytes,
+            ));
+          }
         }
       }
     }
 
-    // 🌟 5. 아카이브를 최종 단일 .zip 파일 바이너리로 인코딩 및 디스크 저장
+    // 6. 메모리에 빌드된 아카이브를 단일 ZIP 파일 데이터로 변환
+    final List<int>? zipBytes = ZipEncoder().encode(archive);
+    if (zipBytes == null || zipBytes.isEmpty) {
+      throw Exception('ZIP 압축 인코딩에 실패했습니다.');
+    }
+
+    // 7. 기기 임시 폴더에 디스크 저장 처리 (물리적 쓰기 완료 보장)
     final tempDir = await getTemporaryDirectory();
     final nowStr = DateFormat('yyyyMMdd_HHmm').format(DateTime.now());
     String zipPath = join(tempDir.path, 'trip_backup_$nowStr.zip');
 
-    var zipBytes = ZipEncoder().encode(archive);
-    if (zipBytes != null) {
-      final zipFile = File(zipPath);
-      await zipFile.writeAsBytes(zipBytes, flush: true); // 💡 flush: true로 데이터 누수 방지
-    }
+    final zipFile = File(zipPath);
+    await zipFile.writeAsBytes(zipBytes, flush: true); // 💡 flush 처리로 전송 도중 잘림 현상 방지
 
-    // 6. 시스템 공유 허브 호출 (구글 드라이브 전송)
+    // 8. 알림창 및 시스템 공유 허브 호출
     await Share.shareXFiles(
       [XFile(zipPath)],
       subject: '여행 통합 데이터 백업 $nowStr',
     );
 
-    return '백업 압축 파일이 준비되어 공유 창을 실행했습니다.';
+    return '백업 파일 내보내기가 완료되었습니다.';
   }
 
-  /// ── 📂 [가져오기] 구글 드라이브나 스마트폰 공간에서 백업 파일을 선택해 데이터 복원 ──
+  /// ── 📂 [가져오기] 압축 해제 및 트랜잭션 단위 복원 ──
   Future<String> _restoreFromSelectedFile(String dbName) async {
     FilePickerResult? result = await FilePicker.platform.pickFiles(
       type: FileType.custom,
-      allowedExtensions: ['zip', 'xlsx'],
+      allowedExtensions: ['zip'],
     );
 
     if (result == null || result.files.single.path == null) {
@@ -172,12 +171,12 @@ class Backup extends _$Backup {
     final filePath = result.files.single.path!;
     final db = await _sqlService.getDB(dbName);
 
-    // 2. 임시 디렉토리에 압축 풀기
     final tempDir = await getTemporaryDirectory();
     final decodeDir = Directory(join(tempDir.path, 'restore_temp'));
     if (await decodeDir.exists()) await decodeDir.delete(recursive: true);
     await decodeDir.create(recursive: true);
 
+    // ZIP 해제 로직
     final bytes = File(filePath).readAsBytesSync();
     final archive = ZipDecoder().decodeBytes(bytes);
 
@@ -191,45 +190,39 @@ class Backup extends _$Backup {
       }
     }
 
-    // 3. 내부에서 엑셀 파일 찾기
+    // 내부 엑셀 찾기
     final entities = await decodeDir.list().toList();
     File? excelFile;
     for (var entity in entities) {
-      if (entity is File && extension(entity.path) == '.xlsx') {
+      if (entity is File && (extension(entity.path) == '.xlsx' || basename(entity.path) == 'trip_backup.xlsx')) {
         excelFile = entity;
         break;
       }
     }
 
     if (excelFile == null) {
-      return '백업 파일 내에서 엑셀 데이터를 찾을 수 없습니다.';
+      return '백업 파일 내에서 유효한 엑셀 데이터를 찾을 수 없습니다.';
     }
 
-    // 4. 🌟 [핵심] 트랜잭션을 열고 기존 데이터 통째로 날린 후 복원 진행 🌟
-    // 트랜잭션을 쓰면 복원 도중 에러가 나도 기존 데이터가 깨지지 않고 안전하게 롤백됩니다.
+    // 여행앱 스타일: 밀어버리고 재생성 트랜잭션
     await db.transaction((txn) async {
       List<String> tables = ['trip', 'comment', 'daily_note'];
 
-      // ⚠️ 아까 등록한 새 데이터를 지우기 위해 기존 테이블 데이터 청소
       for (String tableName in tables) {
         await txn.execute("DELETE FROM $tableName"); 
-        // 만약 Auto Increment (id 자동증가) 초기화가 필요하다면 아래 줄도 실행
         await txn.execute("DELETE FROM sqlite_sequence WHERE name='$tableName'");
       }
 
-      // 5. 엑셀 파일 읽어서 DB에 삽입하기
-      var bytes = excelFile!.readAsBytesSync();
-      var excel = Excel.decodeBytes(bytes);
+      var excelBytes = excelFile!.readAsBytesSync();
+      var excel = Excel.decodeBytes(excelBytes);
 
       for (String tableName in tables) {
         if (!excel.sheets.containsKey(tableName)) continue;
         var sheet = excel[tableName];
-        if (sheet.maxRows <= 1) continue; // 헤더만 있거나 빈 시트 패스
+        if (sheet.maxRows <= 1) continue;
 
-        // 첫 번째 행에서 컬럼명(헤더) 추출
         List<String> headers = sheet.rows.first.map((cell) => cell?.value?.toString() ?? '').toList();
 
-        // 두 번째 행부터 데이터 꺼내서 Insert
         for (int i = 1; i < sheet.maxRows; i++) {
           var row = sheet.rows[i];
           Map<String, dynamic> rowMap = {};
@@ -240,7 +233,6 @@ class Backup extends _$Backup {
             rowMap[headers[j]] = cellValue?.toString();
           }
 
-          // 비어있지 않은 데이터만 삽입
           if (rowMap.isNotEmpty) {
             await txn.insert(tableName, rowMap);
           }
@@ -248,7 +240,7 @@ class Backup extends _$Backup {
       }
     });
 
-    // 6. 이미지 폴더 복구 (기존 이미지 폴더 지우고 압축 해제된 이미지로 교체)
+    // 이미지 교체
     final appDocDir = await getApplicationDocumentsDirectory();
     Directory targetImgDir = Directory(join(appDocDir.path, 'trip_images'));
     Directory sourceImgDir = Directory(join(decodeDir.path, 'trip_images'));
@@ -264,9 +256,8 @@ class Backup extends _$Backup {
       }
     }
 
-    // 7. 사용한 임시 폴더 삭제
     await decodeDir.delete(recursive: true);
 
-    return '데이터 및 이미지 복원이 성공적으로 완료되었습니다.';
+    return '데이터 및 이미지 복원이 완료되었습니다.';
   }
 }
