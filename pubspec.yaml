@@ -42,7 +42,7 @@ dependencies:
     # 엑셀 연동
   excel: ^4.0.6
   file_picker: ^8.1.2
-  share_plus: ^10.1.2
+  share_plus: ^12.0.2
   path_provider: ^2.1.4  
   archive: ^3.6.1
 
@@ -58,6 +58,7 @@ dependencies:
 
   flutter_localizations:
     sdk: flutter
+
 
 dev_dependencies:
   flutter_test:

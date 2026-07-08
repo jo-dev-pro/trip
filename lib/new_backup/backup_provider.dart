@@ -6,7 +6,7 @@ import 'package:intl/intl.dart';
 import 'package:path/path.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
-import 'package:share_plus/share_plus.dart'; // 공유 창 실행용 패키지
+import 'package:share_plus/share_plus.dart'; // 💡 as sp 추가// 공유 창 실행용 패키지
 import 'package:file_picker/file_picker.dart'; // 복원 파일 선택용 패키지
 
 import 'backup_sql_service.dart';
@@ -95,40 +95,53 @@ class Backup extends _$Backup {
       excel.delete(defaultSheet);
     }
 
-    // 🌟 2. 엑셀 인코딩 데이터를 메모리에 즉시 고정 (깨짐 방지 핵심)
-    final List<int>? excelBytes = excel.encode(); 
-    if (excelBytes == null || excelBytes.isEmpty) {
-      throw Exception('엑셀 데이터 인코딩에 실패했습니다.');
-    }
+    // 🌟 [개선] 메모리 꼬임 방지를 위해 임시 파일 시스템 거쳐서 바이트 추출
+    final tempDir = await getTemporaryDirectory();
+    final nowStr = DateFormat('yyyyMMdd_HHmm').format(DateTime.now());
+    String tempExcelPath = join(tempDir.path, 'temp_trip_data.xlsx');
+    
+    final tempExcelFile = File(tempExcelPath);
+    final excelBytesData = excel.encode();
+    if (excelBytesData == null) throw Exception('엑셀 파일 변환에 실패했습니다.');
+    await tempExcelFile.writeAsBytes(excelBytesData, flush: true);
+    
+    // 안전하게 물리 파일에서 최종 바이트 추출
+    final List<int> excelBytes = tempExcelFile.readAsBytesSync();
 
     // 3. 가상 압축 파일(Archive) 저장소 개설
     var archive = Archive();
 
-    // 🌟 4. 껍데기가 아닌 진짜 데이터 바이트를 압축 파일에 주입
+    // 4. 엑셀 데이터 압축 아카이브에 주입
     archive.addFile(ArchiveFile(
-      'trip_backup.xlsx', // 내부 파일명 지정
+      'trip_backup.xlsx', 
       excelBytes.length,
       excelBytes,
     ));
 
-    // 5. 이미지 폴더 백업 처리 (물리 파일 동기화 방식)
+    // 5. 이미지 폴더 백업 처리 (물리 경로 및 폴더 자동 생성 검증)
     final appDocDir = await getApplicationDocumentsDirectory();
-    Directory sourceImgDir = Directory(join(appDocDir.path, 'trip_images'));
+    
+    // 💡 개발 환경에 따라 내부 저장 경로가 다를 수 있으므로 두 가지 경로 검증
+    List<String> possibleImagePaths = [
+      join(appDocDir.path, 'trip_images'),
+      join(tempDir.path, 'trip_images'), // 혹시 임시폴더에 이미지가 저장되는 경우 대응
+    ];
 
-    if (await sourceImgDir.exists()) {
-      // 디렉토리 내 모든 파일을 동기식으로 안전하게 리스팅
-      List<FileSystemEntity> files = sourceImgDir.listSync(recursive: false);
-      
-      for (var file in files) {
-        if (file is File) {
-          List<int> imgBytes = file.readAsBytesSync(); // 동기식 바이너리 로드
-          if (imgBytes.isNotEmpty) {
-            String imgName = basename(file.path);
-            archive.addFile(ArchiveFile(
-              'trip_images/$imgName', 
-              imgBytes.length, 
-              imgBytes,
-            ));
+    for (String path in possibleImagePaths) {
+      Directory sourceImgDir = Directory(path);
+      if (await sourceImgDir.exists()) {
+        List<FileSystemEntity> files = sourceImgDir.listSync(recursive: false);
+        for (var file in files) {
+          if (file is File) {
+            List<int> imgBytes = file.readAsBytesSync();
+            if (imgBytes.isNotEmpty) {
+              String imgName = basename(file.path);
+              archive.addFile(ArchiveFile(
+                'trip_images/$imgName', 
+                imgBytes.length, 
+                imgBytes,
+              ));
+            }
           }
         }
       }
@@ -137,22 +150,28 @@ class Backup extends _$Backup {
     // 6. 메모리에 빌드된 아카이브를 단일 ZIP 파일 데이터로 변환
     final List<int>? zipBytes = ZipEncoder().encode(archive);
     if (zipBytes == null || zipBytes.isEmpty) {
-      throw Exception('ZIP 압축 인코딩에 실패했습니다.');
+      throw Exception('ZIP 압축 파일 생성에 실패했습니다.');
     }
 
-    // 7. 기기 임시 폴더에 디스크 저장 처리 (물리적 쓰기 완료 보장)
-    final tempDir = await getTemporaryDirectory();
-    final nowStr = DateFormat('yyyyMMdd_HHmm').format(DateTime.now());
+    // 7. 기기 임시 폴더에 최종 ZIP 디스크 저장
     String zipPath = join(tempDir.path, 'trip_backup_$nowStr.zip');
-
     final zipFile = File(zipPath);
-    await zipFile.writeAsBytes(zipBytes, flush: true); // 💡 flush 처리로 전송 도중 잘림 현상 방지
+    await zipFile.writeAsBytes(zipBytes, flush: true);
 
-    // 8. 알림창 및 시스템 공유 허브 호출
-    await Share.shareXFiles(
+    // 임시 사용한 엑셀 단일 파일은 정리
+    if (await tempExcelFile.exists()) await tempExcelFile.delete();
+
+    // 🌟 8. [핵심수정] shareXFilesWithResult를 사용하여 사용자의 취소 행위 감지 🌟
+    // ignore: deprecated_member_use
+    final ShareResult shareResult = await Share.shareXFiles(
       [XFile(zipPath)],
       subject: '여행 통합 데이터 백업 $nowStr',
     );
+
+    // 사용자가 전송을 안 하고 창을 그냥 닫았거나 뒤로가기를 누른 경우 처리
+    if (shareResult.status == ShareResultStatus.dismissed) {
+      return '백업 파일 내보내기가 취소되었습니다.';
+    }
 
     return '백업 파일 내보내기가 완료되었습니다.';
   }
