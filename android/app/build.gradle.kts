@@ -12,6 +12,9 @@ if (keystorePropertiesFile.exists()) {
 
 plugins {
     id("com.android.application")
+    // START: FlutterFire Configuration
+    id("com.google.gms.google-services")
+    // END: FlutterFire Configuration
     id("kotlin-android")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
@@ -46,20 +49,24 @@ android {
     // 2. 인증키(Keystore) 설정 주입하기
     signingConfigs {
         create("release") {
-            keyAlias = keystoreProperties["keyAlias"] as String?
-            keyPassword = keystoreProperties["keyPassword"] as String?
+            // key.properties 파일이 없을 경우를 대비한 안전 장치 추가
+            keyAlias = keystoreProperties.getProperty("keyAlias")
+            keyPassword = keystoreProperties.getProperty("keyPassword")
             storeFile = keystoreProperties["storeFile"]?.let { file(it) }
-            storePassword = keystoreProperties["storePassword"] as String?
+            storePassword = keystoreProperties.getProperty("storePassword")
         }
     }
 
     buildTypes {
         debug {
-            // 디버그 모드로 빌드할 때도 내 정식 키(release 설정)를 사용하겠다!
-            signingConfig = signingConfigs.getByName("release")
+            // 💡 개발 모드에서는 키스토어 설정에 의존하기보다 디버그 키를 쓰는 것이 더 안전합니다.
+            // 만약 꼭 필요하다면 아래와 같이 null 확인을 추가하세요.
+            signingConfig = signingConfigs.findByName("release") ?: signingConfigs.getByName("debug")
         }
         release {
             signingConfig = signingConfigs.getByName("release")
+            isMinifyEnabled = false
+            isShrinkResources = false
         }
     }
 }

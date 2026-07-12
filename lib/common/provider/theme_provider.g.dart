@@ -1,6 +1,6 @@
 // GENERATED CODE - DO NOT MODIFY BY HAND
 
-part of 'backup_provider.dart';
+part of 'theme_provider.dart';
 
 // **************************************************************************
 // RiverpodGenerator
@@ -9,50 +9,51 @@ part of 'backup_provider.dart';
 // GENERATED CODE - DO NOT MODIFY BY HAND
 // ignore_for_file: type=lint, type=warning
 
-@ProviderFor(Backup)
-final backupProvider = BackupProvider._();
+@ProviderFor(ThemeModeNotifier)
+final themeModeProvider = ThemeModeNotifierProvider._();
 
-final class BackupProvider extends $NotifierProvider<Backup, BackupState> {
-  BackupProvider._()
+final class ThemeModeNotifierProvider
+    extends $NotifierProvider<ThemeModeNotifier, ThemeMode> {
+  ThemeModeNotifierProvider._()
     : super(
         from: null,
         argument: null,
         retry: null,
-        name: r'backupProvider',
+        name: r'themeModeProvider',
         isAutoDispose: true,
         dependencies: null,
         $allTransitiveDependencies: null,
       );
 
   @override
-  String debugGetCreateSourceHash() => _$backupHash();
+  String debugGetCreateSourceHash() => _$themeModeNotifierHash();
 
   @$internal
   @override
-  Backup create() => Backup();
+  ThemeModeNotifier create() => ThemeModeNotifier();
 
   /// {@macro riverpod.override_with_value}
-  Override overrideWithValue(BackupState value) {
+  Override overrideWithValue(ThemeMode value) {
     return $ProviderOverride(
       origin: this,
-      providerOverride: $SyncValueProvider<BackupState>(value),
+      providerOverride: $SyncValueProvider<ThemeMode>(value),
     );
   }
 }
 
-String _$backupHash() => r'12c67d19b4ecd8855cb4aec30d602a0ea0c81db4';
+String _$themeModeNotifierHash() => r'1b0e98d672fefc36c2d9a19f8e544f55633fb507';
 
-abstract class _$Backup extends $Notifier<BackupState> {
-  BackupState build();
+abstract class _$ThemeModeNotifier extends $Notifier<ThemeMode> {
+  ThemeMode build();
   @$mustCallSuper
   @override
   void runBuild() {
-    final ref = this.ref as $Ref<BackupState, BackupState>;
+    final ref = this.ref as $Ref<ThemeMode, ThemeMode>;
     final element =
         ref.element
             as $ClassProviderElement<
-              AnyNotifier<BackupState, BackupState>,
-              BackupState,
+              AnyNotifier<ThemeMode, ThemeMode>,
+              ThemeMode,
               Object?,
               Object?
             >;

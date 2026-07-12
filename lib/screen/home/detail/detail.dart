@@ -2,12 +2,13 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:cached_network_image/cached_network_image.dart'; // 💡 초고속 이미지 캐싱 라이브러리
 import 'package:trip/model/daily_note_model.dart';
 import 'package:trip/model/trip_comment_model.dart';
 import 'package:trip/model/trip_model.dart';
-import 'package:trip/provider/trip_provider.dart'; // 💡 단일 통합 프로바이더 경로
+import 'package:trip/provider/trip_provider.dart'; 
 import 'package:trip/screen/edit/edit_screen.dart';
-import 'package:trip/screen/home/detail/detail_view.dart';
+import 'package:trip/screen/home/detail/detail_view.dart'; // ImageCommentViewer가 들어있는 파일
 
 class DetailScreen extends ConsumerWidget {
   final int id;
@@ -33,8 +34,7 @@ class DetailScreen extends ConsumerWidget {
         // 💡 통합된 TripDetailState 객체에서 필드 추출
         final TripModel trip = data.trip;
         final List<TripCommentModel> comments = data.comments;
-        final List<DailyNoteModel> dailyNotes =
-            data.dailyNotes; // dynamic 대신 명확한 모델 타입 지정
+        final List<DailyNoteModel> dailyNotes = data.dailyNotes;
 
         final hasImages = comments.isNotEmpty;
         // 💡 대표 이미지 우선 → 없으면 첫 번째 이미지 → 없으면 null
@@ -43,7 +43,7 @@ class DetailScreen extends ConsumerWidget {
             ? trip.coverImagePath
             : (hasImages ? comments.first.path : null);
 
-        // 날짜가 누락되었을 경우를 대비한 가드 코드 포함
+        // 날짜 가드 코드
         final formattedStartDate = trip.startDate != null
             ? DateFormat('yyyy. MM. dd').format(trip.startDate!)
             : '-';
@@ -59,7 +59,7 @@ class DetailScreen extends ConsumerWidget {
           backgroundColor: const Color(0xFFF4F6FA),
           body: CustomScrollView(
             slivers: [
-              // ─── 상단 앱바 ───
+              // ─── 상단 앱바 (대표 이미지) ───
               SliverAppBar(
                 expandedHeight: 260,
                 pinned: true,
@@ -118,8 +118,24 @@ class DetailScreen extends ConsumerWidget {
                   background: Stack(
                     fit: StackFit.expand,
                     children: [
+                      // 💡 로컬/서버 동적 가상화 분기 처리 이미지 영역
                       firstImagePath != null
-                          ? Image.file(File(firstImagePath), fit: BoxFit.cover)
+                          ? (firstImagePath.startsWith('http')
+                              ? CachedNetworkImage(
+                                  imageUrl: firstImagePath,
+                                  fit: BoxFit.cover,
+                                  placeholder: (context, url) => Container(
+                                    color: Colors.indigo.shade50,
+                                    child: const Center(
+                                      child: CircularProgressIndicator(strokeWidth: 2),
+                                    ),
+                                  ),
+                                  errorWidget: (context, url, error) => Container(
+                                    color: Colors.indigo.shade50,
+                                    child: const Icon(Icons.broken_image, color: Colors.grey),
+                                  ),
+                                )
+                              : Image.file(File(firstImagePath), fit: BoxFit.cover))
                           : Container(
                               color: Colors.indigo.shade50,
                               child: Icon(
@@ -160,7 +176,7 @@ class DetailScreen extends ConsumerWidget {
                           borderRadius: BorderRadius.circular(14),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.03),
+                              color: Colors.black.withOpacity(0.03),
                               blurRadius: 8,
                               offset: const Offset(0, 2),
                             ),
@@ -240,7 +256,7 @@ class DetailScreen extends ConsumerWidget {
                             border: Border.all(color: Colors.grey.shade200),
                             boxShadow: [
                               BoxShadow(
-                                color: Colors.black.withValues(alpha:0.02),
+                                color: Colors.black.withOpacity(0.02),
                                 blurRadius: 6,
                                 offset: const Offset(0, 2),
                               ),
@@ -284,7 +300,6 @@ class DetailScreen extends ConsumerWidget {
                   ).format(currentDay);
                   final dayCount = index + 1;
 
-                  // 💡 DB에서 가져온 일자별 comment를 타임라인에 정확히 매핑
                   String dayTheme = '${trip.place} 탐방 일정';
                   if (dailyNotes.isNotEmpty) {
                     final matchedNote = dailyNotes.firstWhere(
@@ -322,7 +337,7 @@ class DetailScreen extends ConsumerWidget {
                                 ),
                                 boxShadow: [
                                   BoxShadow(
-                                    color: Colors.indigo.withValues(alpha:0.3),
+                                    color: Colors.indigo.withOpacity(0.3),
                                     blurRadius: 4,
                                   ),
                                 ],
@@ -398,8 +413,6 @@ class DetailScreen extends ConsumerWidget {
                 ),
 
               // ─── 사진 그리드 배치 ───
-              // 💡 [수정 1] SliverGrid 대신 SliverList + 2열 Row로 구성
-              //    → 코멘트 텍스트 높이가 가변이어도 잘리지 않음
               if (hasImages)
                 SliverPadding(
                   padding: const EdgeInsets.symmetric(horizontal: 20.0),
@@ -444,13 +457,15 @@ class DetailScreen extends ConsumerWidget {
     );
   }
 
-  // ─── 이미지 카드 빌더 (코멘트 잘림 해결: 고정 이미지 높이 + 가변 텍스트) ───
+  // ─── 이미지 카드 빌더 (CachedNetworkImage 완벽 마운트) ───
   Widget _buildImageCard(
     BuildContext context,
     List<TripCommentModel> comments,
     int index,
   ) {
     final item = comments[index];
+    final isNetwork = item.path.startsWith('http') || item.path.startsWith('https');
+
     return GestureDetector(
       onTap: () {
         Navigator.push(
@@ -475,7 +490,7 @@ class DetailScreen extends ConsumerWidget {
           borderRadius: BorderRadius.circular(14),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha:0.04),
+              color: Colors.black.withOpacity(0.04),
               blurRadius: 6,
               offset: const Offset(0, 2),
             ),
@@ -493,17 +508,36 @@ class DetailScreen extends ConsumerWidget {
               child: SizedBox(
                 height: 140,
                 width: double.infinity,
-                child: Image.file(
-                  File(item.path),
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) => Container(
-                    color: Colors.grey[200],
-                    child: const Icon(Icons.broken_image, color: Colors.grey),
-                  ),
-                ),
+                child: isNetwork
+                    ? CachedNetworkImage(
+                        imageUrl: item.path,
+                        fit: BoxFit.cover,
+                        placeholder: (context, url) => Container(
+                          color: Colors.grey[100],
+                          child: const Center(
+                            child: SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            ),
+                          ),
+                        ),
+                        errorWidget: (context, url, error) => Container(
+                          color: Colors.grey[200],
+                          child: const Icon(Icons.broken_image, color: Colors.grey),
+                        ),
+                      )
+                    : Image.file(
+                        File(item.path),
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) => Container(
+                          color: Colors.grey[200],
+                          child: const Icon(Icons.broken_image, color: Colors.grey),
+                        ),
+                      ),
               ),
             ),
-            // 💡 코멘트 영역: 고정 높이 제거 → 텍스트 길이에 따라 자연스럽게 늘어남
+            // 코멘트 영역: 가변 텍스트 대응
             if (item.comment.isNotEmpty)
               Padding(
                 padding: const EdgeInsets.symmetric(

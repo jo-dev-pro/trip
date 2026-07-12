@@ -1,9 +1,9 @@
 import 'dart:io';
-
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart'; // 💡 임포트 추가
 import 'package:trip/model/trip_comment_model.dart';
 
-// ─── 💡 [풀스크린 버전] 사진 전체 화면 및 하단 코멘트 오버레이 뷰어 ───
+/// ─── 💡 [풀스크린 버전] 초고속 캐싱이 내장된 사진 뷰어 ───
 class ImageCommentViewer extends StatefulWidget {
   final List<TripCommentModel> imageComments;
   final int initialIndex;
@@ -26,7 +26,6 @@ class _ImageCommentViewerState extends State<ImageCommentViewer> {
   void initState() {
     super.initState();
     _currentIndex = widget.initialIndex;
-    // 💡 사용자가 선택한 사진 위치에서 스크롤이 시작되도록 설정
     _pageController = PageController(initialPage: widget.initialIndex);
   }
 
@@ -38,7 +37,6 @@ class _ImageCommentViewerState extends State<ImageCommentViewer> {
 
   @override
   Widget build(BuildContext context) {
-    // 현재 보고 있는 페이지의 데이터 모델 확보
     final currentItem = widget.imageComments[_currentIndex];
     final totalCount = widget.imageComments.length;
 
@@ -51,20 +49,19 @@ class _ImageCommentViewerState extends State<ImageCommentViewer> {
         leading: IconButton(
           icon: Container(
             padding: const EdgeInsets.all(6),
-            decoration: BoxDecoration(
-              color: Colors.black.withValues(alpha: 0.4),
+            decoration: const BoxDecoration(
+              color: Colors.black38,
               shape: BoxShape.circle,
             ),
             child: const Icon(Icons.close, color: Colors.white, size: 22),
           ),
           onPressed: () => Navigator.pop(context),
         ),
-        // 💡 [핵심] 상단 중앙에 현재 이미지 순서 표시 (예: 3 / 15)
         title: Container(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-          decoration: BoxDecoration(
-            color: Colors.black.withValues(alpha: 0.4),
-            borderRadius: BorderRadius.circular(20),
+          decoration: const BoxDecoration(
+            color: Colors.black38,
+            borderRadius: BorderRadius.all(Radius.circular(20)),
           ),
           child: Text(
             '${_currentIndex + 1} / $totalCount',
@@ -81,42 +78,55 @@ class _ImageCommentViewerState extends State<ImageCommentViewer> {
       body: Stack(
         fit: StackFit.expand,
         children: [
-          // 1. 🔴 [핵심] 좌우 슬라이드가 가능한 PageView 배치
           PageView.builder(
             controller: _pageController,
             itemCount: totalCount,
-            physics: const BouncingScrollPhysics(), // 부드러운 스크롤 바운스 효과
+            physics: const BouncingScrollPhysics(),
             onPageChanged: (index) {
               setState(() {
-                _currentIndex = index; // 페이지가 바뀔 때마다 인덱스 및 코멘트 갱신
+                _currentIndex = index;
               });
             },
             itemBuilder: (context, index) {
               final item = widget.imageComments[index];
+              final isNetwork = item.path.startsWith('http') || item.path.startsWith('https');
+
               return InteractiveViewer(
                 maxScale: 4.0,
                 child: Center(
-                  child: Image.file(
-                    File(item.path),
-                    fit: BoxFit.contain, // 💡 슬라이드 감상 시 사진 전체 비율이 깨지지 않도록 수리
-                    width: double.infinity,
-                    height: double.infinity,
-                    errorBuilder: (context, error, stackTrace) => const Center(
-                      child: Icon(Icons.broken_image, size: 60, color: Colors.grey),
-                    ),
-                  ),
+                  // 💡 파이어베이스 이전용 동적 호환 필터 적용
+                  child: isNetwork
+                      ? CachedNetworkImage(
+                          imageUrl: item.path,
+                          fit: BoxFit.contain,
+                          width: double.infinity,
+                          height: double.infinity,
+                          placeholder: (context, url) => const Center(
+                            child: CircularProgressIndicator(color: Colors.white),
+                          ),
+                          errorWidget: (context, url, error) => const Center(
+                            child: Icon(Icons.broken_image, size: 60, color: Colors.grey),
+                          ),
+                        )
+                      : Image.file(
+                          File(item.path),
+                          fit: BoxFit.contain,
+                          width: double.infinity,
+                          height: double.infinity,
+                          errorBuilder: (context, error, stackTrace) => const Center(
+                            child: Icon(Icons.broken_image, size: 60, color: Colors.grey),
+                          ),
+                        ),
                 ),
               );
             },
           ),
-
-          // 2. 하단 코멘트 가독성을 위한 암전 블러 패널
           Positioned(
             bottom: 0,
             left: 0,
             right: 0,
             height: MediaQuery.of(context).size.height * 0.35,
-            child: IgnorePointer( // 패널 뒤의 사진 줌인/멀티터치를 방해하지 않음
+            child: IgnorePointer(
               child: Container(
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
@@ -124,16 +134,14 @@ class _ImageCommentViewerState extends State<ImageCommentViewer> {
                     end: Alignment.bottomCenter,
                     colors: [
                       Colors.transparent,
-                      Colors.black.withValues(alpha: 0.4),
-                      Colors.black.withValues(alpha: 0.85),
+                      Colors.black38,
+                      Colors.black87,
                     ],
                   ),
                 ),
               ),
             ),
           ),
-
-          // 3. 🔴 현재 인덱스 항목의 코멘트 실시간 바인딩 노출
           Positioned(
             bottom: 0,
             left: 0,
@@ -147,9 +155,9 @@ class _ImageCommentViewerState extends State<ImageCommentViewer> {
                   children: [
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: Colors.blue.withValues(alpha: 0.8),
-                        borderRadius: BorderRadius.circular(4),
+                      decoration: const BoxDecoration(
+                        color: Colors.blueAccent,
+                        borderRadius: BorderRadius.all(Radius.circular(4)),
                       ),
                       child: const Text(
                         'MEMO',
@@ -162,8 +170,6 @@ class _ImageCommentViewerState extends State<ImageCommentViewer> {
                       ),
                     ),
                     const SizedBox(height: 10),
-                    
-                    // 데이터가 비어있을 때의 기본 플레이스홀더 처리 포함
                     ConstrainedBox(
                       constraints: BoxConstraints(
                         maxHeight: MediaQuery.of(context).size.height * 0.18,

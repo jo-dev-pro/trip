@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import 'package:cached_network_image/cached_network_image.dart'; // 💡 캐싱 위젯 추가
 
 import '../../common/route/route.dart';
 import '../../model/trip_model.dart';
@@ -17,7 +18,6 @@ class HomeScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // 💡 프로바이더가 AsyncValue<List<TripModel>>을 반환하므로 타입을 일치시킵니다.
     final tripListAsync = ref.watch(tripListProvider);
 
     return JPopScope(
@@ -33,7 +33,6 @@ class HomeScreen extends ConsumerWidget {
               style: TextStyle(fontWeight: FontWeight.bold),
             ),
             actions: [
-              // 새 일정 추가 버튼
               TextButton.icon(
                 onPressed: () async {
                   ref.invalidate(tripFormProvider);
@@ -55,16 +54,14 @@ class HomeScreen extends ConsumerWidget {
                   ),
                 ),
               ),
-              // 기존 백업 버튼
               GestureDetector(
                 onTap: () => context.pushNamed(JRoutes.setting),
                 child: CircleAvatar(
-                  // 💡 화이트에 약간의 투명도를 주어 앱바 색상이 자연스럽게 투영되도록 합니다.
                   backgroundColor: Colors.white.withValues(alpha: 0.2),
                   radius: 20,
                   child: const Icon(
                     Icons.settings_outlined,
-                    color: Colors.white, // 💡 아이콘은 선명한 화이트로 변경
+                    color: Colors.white, 
                     size: 22,
                   ),
                 ),
@@ -89,7 +86,6 @@ class HomeScreen extends ConsumerWidget {
               if (list.isEmpty) {
                 return const BuildEmptyState();
               }
-              // 💡 이제 List<TripModel> 타입이 정확히 맞아떨어집니다!
               return _buildTabBarView(list);
             },
             loading: () => const Center(child: CircularProgressIndicator()),
@@ -105,7 +101,6 @@ class HomeScreen extends ConsumerWidget {
     );
   }
 
-  // 💡 매개변수 타입을 List<TripModel>로 변경하여 에러를 해결합니다.
   Widget _buildTabBarView(List<TripModel> list) {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
@@ -138,7 +133,6 @@ class HomeScreen extends ConsumerWidget {
     );
   }
 
-  // 💡 매개변수 타입을 List<TripModel>로 변경
   Widget _buildtripListView(List<TripModel> items, {required bool isPast}) {
     if (items.isEmpty) {
       return Center(
@@ -148,7 +142,6 @@ class HomeScreen extends ConsumerWidget {
         ),
       );
     }
-    // 마지막 카드에 하단 간격 조정
     int totalCount = items.length;
 
     return ListView.builder(
@@ -200,9 +193,7 @@ class HomeScreen extends ConsumerWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // ── 대표 이미지 표시 구역 ──
                 _buildMainImage(trip),
-
                 Padding(
                   padding: const EdgeInsets.all(16),
                   child: Column(
@@ -297,10 +288,8 @@ class HomeScreen extends ConsumerWidget {
     );
   }
 
-  // ── 💡 TripModel에서 직접 coverImagePath 또는 첫 이미지를 사용 ──
-  //    tripFirstImageProvider 대신 이미 로드된 모델에서 직접 읽어 캐시 문제 해결
+  /// 🌟 [최적화 3] 로컬 주소와 원격지 파이어베이스 CDN 주소를 둘 다 지원하는 초고속 캐싱 빌더
   Widget _buildMainImage(TripModel trip) {
-    // coverImagePath 우선, 없으면 플레이스홀더
     final imagePath = trip.coverImagePath;
 
     if (imagePath == null || imagePath.isEmpty) {
@@ -311,13 +300,23 @@ class HomeScreen extends ConsumerWidget {
         imagePath.startsWith('http') || imagePath.startsWith('https');
 
     return SizedBox(
-      height: 150,
+      height: 180,
       width: double.infinity,
       child: isNetwork
-          ? Image.network(
-              imagePath,
+          ? CachedNetworkImage(
+              imageUrl: imagePath,
               fit: BoxFit.cover,
-              errorBuilder: (ctx, err, stack) => _buildPlaceholderImage(),
+              placeholder: (context, url) => Container(
+                color: Colors.indigo.shade50,
+                child: const Center(
+                  child: SizedBox(
+                    width: 24,
+                    height: 24,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                ),
+              ),
+              errorWidget: (ctx, url, err) => _buildPlaceholderImage(),
             )
           : Image.file(
               File(imagePath),
@@ -327,10 +326,9 @@ class HomeScreen extends ConsumerWidget {
     );
   }
 
-  // ── ✨ 공통 플레이스홀더 이미지 레이아웃 메서드 추가 ──
   Widget _buildPlaceholderImage() {
     return Container(
-      height: 150,
+      height: 180,
       width: double.infinity,
       color: Colors.indigo.shade50,
       child: Center(

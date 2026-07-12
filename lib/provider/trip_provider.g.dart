@@ -33,7 +33,7 @@ final class TripListProvider
   TripList create() => TripList();
 }
 
-String _$tripListHash() => r'7e252b559a54aae6620da52b557cb9acd45ed4de';
+String _$tripListHash() => r'e6715d864c17ac796cfc52cc6b5761767fa0baa4';
 
 abstract class _$TripList extends $AsyncNotifier<List<TripModel>> {
   FutureOr<List<TripModel>> build();
@@ -85,7 +85,7 @@ final class TripFormNotifierProvider
   }
 }
 
-String _$tripFormNotifierHash() => r'8dd57c93b80b31dc495620131741daec98cef343';
+String _$tripFormNotifierHash() => r'59c23ff327ba17e4a5821b8494002c289576fa73';
 
 abstract class _$TripFormNotifier extends $Notifier<AsyncValue<TripFormState>> {
   AsyncValue<TripFormState> build();
@@ -147,7 +147,7 @@ final class TripDetailProvider
   }
 }
 
-String _$tripDetailHash() => r'e6abc930a86178f2b5e6df07448314d426076fd1';
+String _$tripDetailHash() => r'9b67925293cf9857d50b4821178ff082554bed66';
 
 final class TripDetailFamily extends $Family
     with
@@ -195,20 +195,12 @@ abstract class _$TripDetail extends $AsyncNotifier<TripDetailState> {
   }
 }
 
-/// 특정 여행 ID(tripId)에 등록된 대표 이미지 경로를 반환하는 함수형 프로바이더
-/// ✨ coverImagePath → 없으면 첫 번째 comment.path 순으로 폴백
-
 @ProviderFor(tripFirstImage)
 final tripFirstImageProvider = TripFirstImageFamily._();
-
-/// 특정 여행 ID(tripId)에 등록된 대표 이미지 경로를 반환하는 함수형 프로바이더
-/// ✨ coverImagePath → 없으면 첫 번째 comment.path 순으로 폴백
 
 final class TripFirstImageProvider
     extends $FunctionalProvider<AsyncValue<String?>, String?, FutureOr<String?>>
     with $FutureModifier<String?>, $FutureProvider<String?> {
-  /// 특정 여행 ID(tripId)에 등록된 대표 이미지 경로를 반환하는 함수형 프로바이더
-  /// ✨ coverImagePath → 없으면 첫 번째 comment.path 순으로 폴백
   TripFirstImageProvider._({
     required TripFirstImageFamily super.from,
     required int super.argument,
@@ -252,10 +244,7 @@ final class TripFirstImageProvider
   }
 }
 
-String _$tripFirstImageHash() => r'1aab43a5e0c8976ddb70833d6cd5d72ba0334d3d';
-
-/// 특정 여행 ID(tripId)에 등록된 대표 이미지 경로를 반환하는 함수형 프로바이더
-/// ✨ coverImagePath → 없으면 첫 번째 comment.path 순으로 폴백
+String _$tripFirstImageHash() => r'7ade3626367af3eac2630a7345670a38581e3d28';
 
 final class TripFirstImageFamily extends $Family
     with $FunctionalFamilyOverride<FutureOr<String?>, int> {
@@ -267,9 +256,6 @@ final class TripFirstImageFamily extends $Family
         $allTransitiveDependencies: null,
         isAutoDispose: true,
       );
-
-  /// 특정 여행 ID(tripId)에 등록된 대표 이미지 경로를 반환하는 함수형 프로바이더
-  /// ✨ coverImagePath → 없으면 첫 번째 comment.path 순으로 폴백
 
   TripFirstImageProvider call(int tripId) =>
       TripFirstImageProvider._(argument: tripId, from: this);

@@ -11,6 +11,7 @@ import '../../screen/widget/image_picker_sheet.dart';
 import '../../screen/widget/section_card.dart';
 import '../../screen/widget/styled_text_field.dart';
 
+/// ── 💾 [클라우드 저장 대응형] 여행 상세 수정 및 일정 삭제 화면 ──
 class EditScreen extends ConsumerStatefulWidget {
   final TripDetailState tripState;
 
@@ -27,14 +28,11 @@ class _EditScreenState extends ConsumerState<EditScreen> {
   final _noteCtrl = TextEditingController();
   final List<TextEditingController> _themeCtrls = [];
   
-  // 저장 중 상태를 명확하게 제어하기 위한 로컬 변수
   bool _isSavingLocal = false;
 
   @override
   void initState() {
     super.initState();
-    // 데이터 소스가 위젯 생성 시점에 확실하므로 포스트 프레임 콜백 없이 즉시 초기화하여 
-    // 깜빡임 및 초기 렌더링 지연을 방지합니다.
     _initializeControllers();
   }
 
@@ -54,15 +52,13 @@ class _EditScreenState extends ConsumerState<EditScreen> {
     final comments = widget.tripState.comments;
     final dailyNotes = widget.tripState.dailyNotes;
 
-    // 🎯 [수정]: addPostFrameCallback으로 감싸 빌드 사이클과의 충돌을 원천 차단합니다.
+    // 포스트 프레임워크 딜레이 콜백으로 상태 초기 주입 연동 충돌 해결
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         ref.read(tripFormProvider.notifier).setTravel(trip, comments, dailyNotes);
       }
     });
 
-    // 💡 컨트롤러의 글자 세팅은 로컬 변수 조작이므로 빌드 충돌과 무관하여 
-    // 화면 깜빡임을 방지하기 위해 콜백 바깥에서 즉시 수행하는 것이 좋습니다.
     _titleCtrl.text = trip.title;
     _placeCtrl.text = trip.place;
     _noteCtrl.text = trip.note ?? '';
@@ -113,6 +109,7 @@ class _EditScreenState extends ConsumerState<EditScreen> {
       return;
     }
 
+    // 여행 기간 단축으로 인한 일차 데이터 소실 경고 다이얼로그 표시
     if (newDays < originalDays) {
       if (!mounted) return;
       final bool? confirm = await showDialog<bool>(
@@ -168,6 +165,7 @@ class _EditScreenState extends ConsumerState<EditScreen> {
     if (mounted) setState(() {});
   }
 
+  // 수정 처리 핵심 핸들러
   Future<void> _onUpdate() async {
     FocusScope.of(context).unfocus();
     if (!_formKey.currentState!.validate()) return;
@@ -179,7 +177,7 @@ class _EditScreenState extends ConsumerState<EditScreen> {
     try {
       final notifier = ref.read(tripFormProvider.notifier);
       
-      // 💡 [중요] 저장 직전, 컨트롤러에 남아있는 최종 텍스트 값을 상태에 최종 반영합니다.
+      // 저장 직전 폼에 입력된 내용을 임시 폼 메모리 상으로 일치 동기화
       for (int i = 0; i < _themeCtrls.length; i++) {
         notifier.updateDailyNoteComment(i + 1, _themeCtrls[i].text.trim());
       }
@@ -223,6 +221,7 @@ class _EditScreenState extends ConsumerState<EditScreen> {
     );
   }
 
+  // 삭제 처리 핸들러 (원격지 파이어베이스 데이터 순차 삭제 동기화)
   Future<void> _onDelete() async {
     final bool? confirm = await showDialog<bool>(
       context: context,
@@ -294,7 +293,7 @@ class _EditScreenState extends ConsumerState<EditScreen> {
             child: ListView(
               padding: const EdgeInsets.all(20),
               children: [
-                // ── 제목 ──
+                // 제목
                 SectionCard(
                   children: [
                     FieldLabel(text: '제목 *'),
@@ -313,7 +312,7 @@ class _EditScreenState extends ConsumerState<EditScreen> {
                 ),
                 const SizedBox(height: 12),
 
-                // ── 여행지 ──
+                // 여행지
                 SectionCard(
                   children: [
                     FieldLabel(text: '여행지 *'),
@@ -332,7 +331,7 @@ class _EditScreenState extends ConsumerState<EditScreen> {
                 ),
                 const SizedBox(height: 12),
 
-                // ── 날짜 ──
+                // 날짜
                 SectionCard(
                   children: [
                     FieldLabel(text: '여행 기간 *'),
@@ -370,7 +369,7 @@ class _EditScreenState extends ConsumerState<EditScreen> {
                 ),
                 const SizedBox(height: 12),
 
-                // ── 일자별 주제 입력 ──
+                // 일자별 주제 리벨런스 입력 리스트
                 if (model.startDate != null && model.endDate != null) ...[
                   SectionCard(
                     children: [
@@ -387,7 +386,7 @@ class _EditScreenState extends ConsumerState<EditScreen> {
                             child: Row(
                               children: [
                                 Container(
-                                  width: 55,
+                                  width: 63,
                                   alignment: Alignment.centerLeft,
                                   child: Text(
                                     '$currentDay일차 :',
@@ -399,7 +398,6 @@ class _EditScreenState extends ConsumerState<EditScreen> {
                                 ),
                                 Expanded(
                                   child: TextFormField(
-                                    // Key를 부여하여 Rebalance(원소 가감) 시 상태가 꼬이지 않도록 명시합니다.
                                     key: ValueKey('day_${currentDay}_ctrl'),
                                     controller: _themeCtrls[index],
                                     decoration: InputDecoration(
@@ -420,8 +418,6 @@ class _EditScreenState extends ConsumerState<EditScreen> {
                                         ),
                                       ),
                                     ),
-                                    // 💡 매 타이핑마다 State를 무겁게 변경하는 대신, 컨트롤러 자체에 위임하고 
-                                    // validation 시점 혹은 최종 save 시점에 일괄 동기화하는 구조가 안전합니다.
                                     validator: (value) {
                                       if (value == null || value.trim().isEmpty) {
                                         return '$currentDay일차 주제를 입력하세요.';
@@ -440,7 +436,7 @@ class _EditScreenState extends ConsumerState<EditScreen> {
                   const SizedBox(height: 12),
                 ],
 
-                // ── 메모 ──
+                // 메모
                 SectionCard(
                   children: [
                     FieldLabel(text: '메모'),
@@ -454,7 +450,7 @@ class _EditScreenState extends ConsumerState<EditScreen> {
                 ),
                 const SizedBox(height: 12),
 
-                // ── 이미지 섹션 ──
+                // 이미지 목록 그리드
                 SectionCard(
                   children: [
                     Row(
@@ -506,7 +502,7 @@ class _EditScreenState extends ConsumerState<EditScreen> {
                 ),
                 const SizedBox(height: 32),
 
-                // ── 수정 완료 버튼 ──
+                // 최종 완료 버튼
                 SizedBox(
                   width: double.infinity,
                   height: 52,

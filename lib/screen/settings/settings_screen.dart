@@ -1,45 +1,45 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../common/provider/theme_provider.dart';
 import '../../common/widget/section_title.dart';
-import '../../new_backup/backup_provider.dart';
-import '../../new_backup/backup_state.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final excelState = ref.watch(backupProvider);
+    final themeMode = ref.watch(themeModeProvider);
+    // final excelState = ref.watch(backupProvider);
 
-    // ── 상태 변경 리스너 스낵바 ──
-    ref.listen<BackupState>(backupProvider, (_, next) {
-      // 1. 성공 또는 안내 메시지가 전달된 경우
-      if (next.message != null) {
-        final isCancel =
-            next.message!.contains('취소') ||
-            next.message!.contains('선택하지 않았습니다');
+    // // ── 상태 변경 리스너 스낵바 ──
+    // ref.listen<BackupState>(backupProvider, (_, next) {
+    //   // 1. 성공 또는 안내 메시지가 전달된 경우
+    //   if (next.message != null) {
+    //     final isCancel =
+    //         next.message!.contains('취소') ||
+    //         next.message!.contains('선택하지 않았습니다');
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(next.message!),
-            backgroundColor: isCancel
-                ? Colors.orange.shade700
-                : Theme.of(context).colorScheme.primary,
-          ),
-        );
-      }
+    //     ScaffoldMessenger.of(context).showSnackBar(
+    //       SnackBar(
+    //         content: Text(next.message!),
+    //         backgroundColor: isCancel
+    //             ? Colors.orange.shade700
+    //             : Theme.of(context).colorScheme.primary,
+    //       ),
+    //     );
+    //   }
 
-      // 2. 에러 메시지가 전달된 경우
-      if (next.errorMessage != null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('오류: ${next.errorMessage!}'),
-            backgroundColor: Theme.of(context).colorScheme.error,
-          ),
-        );
-      }
-    });
+    //   // 2. 에러 메시지가 전달된 경우
+    //   if (next.errorMessage != null) {
+    //     ScaffoldMessenger.of(context).showSnackBar(
+    //       SnackBar(
+    //         content: Text('오류: ${next.errorMessage!}'),
+    //         backgroundColor: Theme.of(context).colorScheme.error,
+    //       ),
+    //     );
+    //   }
+    // });
 
     return Scaffold(
       appBar: AppBar(title: const Text('설정')),
@@ -50,7 +50,7 @@ class SettingsScreen extends ConsumerWidget {
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             children: [
               // ── 데이터 관리 섹션 ──
-              const JSectionTitle(title: '데이터 관리'),
+              const JSectionTitle(title: '화면 테마'),
               Card(
                 elevation: 0,
                 shape: RoundedRectangleBorder(
@@ -59,50 +59,70 @@ class SettingsScreen extends ConsumerWidget {
                 ),
                 child: Column(
                   children: [
+                    // 1. 다크 모드
+                    ListTile(
+                      leading: Icon(
+                        themeMode == ThemeMode.dark
+                            ? Icons.dark_mode
+                            : Icons.light_mode,
+                        color: themeMode == ThemeMode.dark
+                            ? Colors.amber
+                            : Colors.blue,
+                      ),
+                      title: const Text("다크 모드"),
+                      trailing: Switch(
+                        value: themeMode == ThemeMode.dark,
+                        onChanged: (value) {
+                          // ref
+                          //     .read(themeModeProvider.notifier)
+                          //     .toggleTheme();
+                        },
+                      ),
+                    ),
                     // 1. 엑셀 내보내기 (폴더 지정형 백업)
-                    ListTile(
-                      leading: Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: Colors.orange.shade50,
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Icon(
-                          Icons.upload_file_outlined,
-                          color: Colors.orange.shade700,
-                        ),
-                      ),
-                      title: const Text('여행 데이터 엑셀 내보내기'),
-                      subtitle: const Text(
-                        '원하는 폴더를 지정하여 여행, 메모, 이미지 세트를 백업합니다.',
-                        style: TextStyle(fontSize: 12),
-                      ),
-                      trailing: const Icon(Icons.chevron_right),
-                      onTap: () => _exportExcel(context, ref),
-                    ),
-                    const Divider(height: 1, indent: 16),
+                    // ListTile(
+                    //   leading: Container(
+                    //     padding: const EdgeInsets.all(8),
+                    //     decoration: BoxDecoration(
+                    //       color: Colors.orange.shade50,
+                    //       borderRadius: BorderRadius.circular(8),
+                    //     ),
+                    //     child: Icon(
+                    //       Icons.upload_file_outlined,
+                    //       color: Colors.orange.shade700,
+                    //     ),
+                    //   ),
+                    //   title: const Text('여행 데이터 엑셀 내보내기'),
+                    //   subtitle: const Text(
+                    //     '원하는 폴더를 지정하여 여행, 메모, 이미지 세트를 백업합니다.',
+                    //     style: TextStyle(fontSize: 12),
+                    //   ),
+                    //   trailing: const Icon(Icons.chevron_right),
+                    //   onTap: () => _exportExcel(context, ref),
+                    // ),
+                    // const Divider(height: 1, indent: 16),
 
-                    // 2. 엑셀 가져오기 (파일 지정형 복원)
-                    ListTile(
-                      leading: Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: Colors.purple.shade50,
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Icon(
-                          Icons.download_outlined,
-                          color: Colors.purple.shade700,
-                        ),
-                      ),
-                      title: const Text('백업 파일 불러오기 (복원)'),
-                      subtitle: const Text(
-                        '백업된 엑셀 파일을 선택하여 여행 기록과 이미지를 복원합니다.',
-                        style: TextStyle(fontSize: 12),
-                      ),
-                      trailing: const Icon(Icons.chevron_right),
-                      onTap: () => _importExcel(context, ref),
-                    ),
+                    // // 2. 엑셀 가져오기 (파일 지정형 복원)
+                    // ListTile(
+                    //   leading: Container(
+                    //     padding: const EdgeInsets.all(8),
+                    //     decoration: BoxDecoration(
+                    //       color: Colors.purple.shade50,
+                    //       borderRadius: BorderRadius.circular(8),
+                    //     ),
+                    //     child: Icon(
+                    //       Icons.download_outlined,
+                    //       color: Colors.purple.shade700,
+                    //     ),
+                    //   ),
+                    //   title: const Text('백업 파일 불러오기 (복원)'),
+                    //   subtitle: const Text(
+                    //     '백업된 엑셀 파일을 선택하여 여행 기록과 이미지를 복원합니다.',
+                    //     style: TextStyle(fontSize: 12),
+                    //   ),
+                    //   trailing: const Icon(Icons.chevron_right),
+                    //   onTap: () => _importExcel(context, ref),
+                    // ),
                   ],
                 ),
               ),
@@ -176,71 +196,71 @@ class SettingsScreen extends ConsumerWidget {
           ),
 
           // ── 전역 로딩 인디케이터 처리 ──
-          if (excelState is AsyncLoading)
-            Container(
-              color: Colors.black.withValues(alpha: 0.15),
-              child: const Center(child: CircularProgressIndicator()),
-            ),
+          // if (excelState is AsyncLoading)
+          //   Container(
+          //     color: Colors.black.withValues(alpha: 0.15),
+          //     child: const Center(child: CircularProgressIndicator()),
+          //   ),
         ],
       ),
     );
   }
 
   /// ── 💾 [내보내기] 다이얼로그 호출 트리거 ──
-  Future<void> _exportExcel(BuildContext context, WidgetRef ref) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('여행 데이터 백업'),
-        content: const Text('전체 데이터 및 이미지를 내보낼 저장 폴더를 선택합니다.\n계속하시겠습니까?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('취소'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('폴더 선택 및 백업'),
-          ),
-        ],
-      ),
-    );
-    if (confirmed == true) {
-      // 💡 프로바이더에 새로 구축한 폴더 지정형 매칭 호출 명칭 ('backup')
-      await ref
-          .read(backupProvider.notifier)
-          .dbBackupRestore('backup', context);
-    }
-  }
+  // Future<void> _exportExcel(BuildContext context, WidgetRef ref) async {
+  //   final confirmed = await showDialog<bool>(
+  //     context: context,
+  //     builder: (ctx) => AlertDialog(
+  //       title: const Text('여행 데이터 백업'),
+  //       content: const Text('전체 데이터 및 이미지를 내보낼 저장 폴더를 선택합니다.\n계속하시겠습니까?'),
+  //       actions: [
+  //         TextButton(
+  //           onPressed: () => Navigator.pop(ctx, false),
+  //           child: const Text('취소'),
+  //         ),
+  //         FilledButton(
+  //           onPressed: () => Navigator.pop(ctx, true),
+  //           child: const Text('폴더 선택 및 백업'),
+  //         ),
+  //       ],
+  //     ),
+  //   );
+  //   if (confirmed == true) {
+  //     // 💡 프로바이더에 새로 구축한 폴더 지정형 매칭 호출 명칭 ('backup')
+  //     await ref
+  //         .read(backupProvider.notifier)
+  //         .dbBackupRestore('backup', context);
+  //   }
+  // }
 
-  /// ── 📂 [가져오기] 다이얼로그 호출 트리거 ──
-  Future<void> _importExcel(BuildContext context, WidgetRef ref) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('백업 파일 가져오기'),
-        content: const Text(
-          '선택한 엑셀 파일 기점으로 데이터를 복원합니다.\n기존 기기의 데이터는 삭제되고 백업 시점으로 동기화됩니다.\n계속하시겠습니까?',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('취소'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('파일 선택 및 복원'),
-          ),
-        ],
-      ),
-    );
-    if (confirmed == true) {
-      // 💡 프로바이더에 새로 구축한 파일 지정형 매칭 호출 명칭 ('restoreFromExcel')
-      await ref
-          .read(backupProvider.notifier)
-          .dbBackupRestore('restoreFromExcel', context);
-    }
-  }
+  // /// ── 📂 [가져오기] 다이얼로그 호출 트리거 ──
+  // Future<void> _importExcel(BuildContext context, WidgetRef ref) async {
+  //   final confirmed = await showDialog<bool>(
+  //     context: context,
+  //     builder: (ctx) => AlertDialog(
+  //       title: const Text('백업 파일 가져오기'),
+  //       content: const Text(
+  //         '선택한 엑셀 파일 기점으로 데이터를 복원합니다.\n기존 기기의 데이터는 삭제되고 백업 시점으로 동기화됩니다.\n계속하시겠습니까?',
+  //       ),
+  //       actions: [
+  //         TextButton(
+  //           onPressed: () => Navigator.pop(ctx, false),
+  //           child: const Text('취소'),
+  //         ),
+  //         FilledButton(
+  //           onPressed: () => Navigator.pop(ctx, true),
+  //           child: const Text('파일 선택 및 복원'),
+  //         ),
+  //       ],
+  //     ),
+  //   );
+  //   if (confirmed == true) {
+  //     // 💡 프로바이더에 새로 구축한 파일 지정형 매칭 호출 명칭 ('restoreFromExcel')
+  //     await ref
+  //         .read(backupProvider.notifier)
+  //         .dbBackupRestore('restoreFromExcel', context);
+  //   }
+  // }
 }
 
 class _GuideRow extends StatelessWidget {
