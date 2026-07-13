@@ -343,13 +343,8 @@ class TripFormNotifier extends _$TripFormNotifier {
         });
       }
 
-      // 7. 데이터 동기화 유지용 로컬 SQLite 미러링 백업 (백업용 유지)
-      await _repository.saveTrip(finalModel);
-      await _repository.saveTripComments(savedTripId, uploadedComments);
-      for (final note in dailyNotes) {
-        await _repository.insertDailyNote(note.copyWith(tripId: savedTripId));
-      }
-
+      await _repository.saveEntireTrip(finalModel, uploadedComments, dailyNotes);
+      
       // 8. 강제 새로고침 리빌드 지시
       ref.invalidate(tripListProvider);
       ref.invalidate(tripFirstImageProvider(savedTripId));
