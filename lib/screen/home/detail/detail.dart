@@ -176,7 +176,7 @@ class DetailScreen extends ConsumerWidget {
                           borderRadius: BorderRadius.circular(14),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withOpacity(0.03),
+                              color: Colors.black.withValues(alpha: 0.03),
                               blurRadius: 8,
                               offset: const Offset(0, 2),
                             ),
@@ -256,7 +256,7 @@ class DetailScreen extends ConsumerWidget {
                             border: Border.all(color: Colors.grey.shade200),
                             boxShadow: [
                               BoxShadow(
-                                color: Colors.black.withOpacity(0.02),
+                                color: Colors.black.withValues(alpha: 0.02),
                                 blurRadius: 6,
                                 offset: const Offset(0, 2),
                               ),
@@ -337,7 +337,7 @@ class DetailScreen extends ConsumerWidget {
                                 ),
                                 boxShadow: [
                                   BoxShadow(
-                                    color: Colors.indigo.withOpacity(0.3),
+                                    color: Colors.indigo.withValues(alpha: 0.3),
                                     blurRadius: 4,
                                   ),
                                 ],
@@ -490,7 +490,7 @@ class DetailScreen extends ConsumerWidget {
           borderRadius: BorderRadius.circular(14),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.04),
+              color: Colors.black.withValues(alpha: 0.04),
               blurRadius: 6,
               offset: const Offset(0, 2),
             ),
@@ -512,6 +512,8 @@ class DetailScreen extends ConsumerWidget {
                     ? CachedNetworkImage(
                         imageUrl: item.path,
                         fit: BoxFit.cover,
+                        memCacheWidth: 500, 
+                        memCacheHeight: 500,
                         placeholder: (context, url) => Container(
                           color: Colors.grey[100],
                           child: const Center(

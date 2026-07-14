@@ -16,13 +16,13 @@ void main() async {
   // 2. Firebase 초기화
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
-  // App Check는 배포 환경에 맞춰 변경 필수
-  await FirebaseAppCheck.instance.activate(
-    androidProvider: kDebugMode
-        ? AndroidProvider.debug
-        : AndroidProvider.playIntegrity,
-    appleProvider: kDebugMode ? AppleProvider.debug : AppleProvider.appAttest,
-  );
+  // // App Check는 배포 환경에 맞춰 변경 필수
+  // await FirebaseAppCheck.instance.activate(
+  //   androidProvider: kDebugMode
+  //       ? AndroidProvider.debug
+  //       : AndroidProvider.playIntegrity,
+  //   appleProvider: kDebugMode ? AppleProvider.debug : AppleProvider.appAttest,
+  // );
   // 4. 데이터 마이그레이션 실행
   runApp(const ProviderScope(child: MyApp()));
 }
@@ -43,13 +43,13 @@ class MyApp extends ConsumerWidget {
           brightness: Brightness.light,
         ),
       ),
-      darkTheme: ThemeData(
-        useMaterial3: true,
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: Colors.indigo,
-          brightness: Brightness.dark,
-        ),
-      ),
+      // darkTheme: ThemeData(
+      //   useMaterial3: true,
+      //   colorScheme: ColorScheme.fromSeed(
+      //     seedColor: Colors.indigo,
+      //     brightness: Brightness.dark,
+      //   ),
+      // ),
       themeMode: themeMode,
 
       localizationsDelegates: const [

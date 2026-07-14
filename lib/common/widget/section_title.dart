@@ -2,10 +2,9 @@ import 'package:flutter/material.dart';
 
     /// 섹션 제목
 class JSectionTitle extends StatelessWidget {
-  const JSectionTitle({super.key, required this.title, this.trailing});
+  const JSectionTitle({super.key, required this.title});
   
   final String title;
-  final Widget? trailing;
 
   @override
   Widget build(BuildContext context) {
@@ -21,7 +20,6 @@ class JSectionTitle extends StatelessWidget {
             ),
           ),
           const Spacer(),
-          if (trailing != null) trailing!,
         ],
       ),
     );

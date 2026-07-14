@@ -17,9 +17,9 @@ import 'trip_detail_state.dart';
 
 part 'trip_provider.g.dart';
 
-// ==========================================
+// ===============================================
 // 1. TripList (파이어베이스 결합형 여행 목록 로더)
-// ==========================================
+// ===============================================
 @riverpod
 class TripList extends _$TripList {
   final _firestore = FirebaseFirestore.instance;
@@ -47,8 +47,10 @@ class TripList extends _$TripList {
 
   Future<void> deleteTrip(int id) async {
     // 💡 1. 로컬 SQLite에서 지우는 동시에 파이어베이스 원격 문서도 제거
-    final localRepo = TripRepository();
-    await localRepo.deleteTrip(id);
+    // final localRepo = TripRepository();
+    // await localRepo.deleteTrip(id);
+
+    await _firestore.collection('trips').doc(id.toString()).delete();
 
     final tripDoc = _firestore.collection('trips').doc(id.toString());
     

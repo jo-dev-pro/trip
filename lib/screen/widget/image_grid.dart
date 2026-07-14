@@ -74,11 +74,11 @@ class ImageGrid extends StatelessWidget {
                                     child: SizedBox(
                                       width: 20,
                                       height: 20,
-                                      child: CircularProgressIndicator(strokeWidth: 2),
+                                      child: CircularProgressIndicator(strokeWidth: 1.5),
                                     ),
                                   ),
                                 ),
-                                errorWidget: (_, __, ___) => Container(
+                                errorWidget: (_, _, _) => Container(
                                   color: Colors.grey.shade200,
                                   child: Icon(Icons.broken_image, color: Colors.grey.shade400),
                                 ),
