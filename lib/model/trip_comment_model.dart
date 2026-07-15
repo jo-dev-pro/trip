@@ -17,9 +17,10 @@ abstract class TripCommentModel with _$TripCommentModel {
 
 // db 형식에 맞는 모델
 class TripCommentDbInfo {
-  static String tableName = 'comment';
+  static String tableName = 'comments';
   static String id = 'id';
   static String tripId = 'tripId';
   static String path = 'path';
   static String comment = 'comment';
 }
+

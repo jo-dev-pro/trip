@@ -33,3 +33,4 @@ class TripDbInfo {
   static String note = 'note';
   static String coverImagePath = 'coverImagePath'; // 💡 추가
 }
+

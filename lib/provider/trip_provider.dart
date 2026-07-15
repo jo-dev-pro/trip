@@ -1,6 +1,4 @@
 import 'dart:io';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
@@ -17,6 +15,12 @@ import 'trip_detail_state.dart';
 
 part 'trip_provider.g.dart';
 
+/// tripListProvider → 여행 목록 전체를 관리 (리스트 화면)
+
+/// tripFormProvider → 여행 작성/수정 폼 상태 관리
+
+/// tripDetailProvider → 특정 여행의 상세 정보 관리 (코멘트, 데일리노트 포함)
+
 // ===============================================
 // 1. TripList (파이어베이스 결합형 여행 목록 로더)
 // ===============================================
@@ -31,8 +35,8 @@ class TripList extends _$TripList {
 
   Future<List<TripModel>> _fetchFromFirebase() async {
     final querySnapshot = await _firestore
-        .collection('trips')
-        .orderBy('id', descending: true)
+        .collection(TripDbInfo.tableName)
+        .orderBy('startDate', descending: true)
         .get();
 
     return querySnapshot.docs
@@ -50,20 +54,29 @@ class TripList extends _$TripList {
     // final localRepo = TripRepository();
     // await localRepo.deleteTrip(id);
 
-    await _firestore.collection('trips').doc(id.toString()).delete();
+    await _firestore
+        .collection(TripDbInfo.tableName)
+        .doc(id.toString())
+        .delete();
 
-    final tripDoc = _firestore.collection('trips').doc(id.toString());
-    
+    final tripDoc = _firestore
+        .collection(TripDbInfo.tableName)
+        .doc(id.toString());
+
     // 서브 컬렉션(comments, daily_notes)도 순차적으로 비웁니다.
-    final commentSnapshot = await tripDoc.collection('comments').get();
+    final commentSnapshot = await tripDoc
+        .collection(TripCommentDbInfo.tableName)
+        .get();
     for (var doc in commentSnapshot.docs) {
       await doc.reference.delete();
     }
-    final noteSnapshot = await tripDoc.collection('daily_notes').get();
+    final noteSnapshot = await tripDoc
+        .collection(TripDailyNoteDbInfo.tableName)
+        .get();
     for (var doc in noteSnapshot.docs) {
       await doc.reference.delete();
     }
-    
+
     await tripDoc.delete();
 
     // 💡 2. 스토리지 파일들도 일괄 삭제 (선택 사항이나 깔끔한 청소 위해 처리)
@@ -86,7 +99,7 @@ class TripFormNotifier extends _$TripFormNotifier {
   final _storage = FirebaseStorage.instance;
 
   List<TripCommentModel> _currentImages = [];
-  String? _coverImagePath; 
+  String? _coverImagePath;
   List<TripCommentModel> get currentImages => _currentImages;
   String? get coverImagePath => _coverImagePath;
 
@@ -130,7 +143,9 @@ class TripFormNotifier extends _$TripFormNotifier {
     final totalDays = trip.endDate!.difference(trip.startDate!).inDays + 1;
     if (totalDays <= 0) return _currentState.copyWith(trip: trip);
 
-    final List<DailyNoteModel> newDailyNotes = List.generate(totalDays, (index) {
+    final List<DailyNoteModel> newDailyNotes = List.generate(totalDays, (
+      index,
+    ) {
       final dayCount = index + 1;
       return currentNotes.firstWhere(
         (note) => note.dayCount == dayCount,
@@ -155,12 +170,10 @@ class TripFormNotifier extends _$TripFormNotifier {
   }
 
   /// 🌟 [최적화 1] 원본 업로드 속도 극대화용 프론트엔드 이미지 압축 알고리즘
+  ///  - 한번에 올리기 때문에 파일명 시간으로 하면 안됨
   Future<File?> _compressImage(String sourcePath) async {
     final tempDir = await getTemporaryDirectory();
-    final targetPath = p.join(
-      tempDir.path,
-      "${DateTime.now().millisecondsSinceEpoch}_compressed.jpg",
-    );
+    final targetPath = p.join(tempDir.path, "${Uuid().v4()}_compressed.webp");
 
     // 해상도를 최대 1080px 범위로 리사이즈하며, 퀄리티를 75% 수준으로 고압축
     var result = await FlutterImageCompress.compressAndGetFile(
@@ -169,6 +182,7 @@ class TripFormNotifier extends _$TripFormNotifier {
       quality: 75,
       minWidth: 1080,
       minHeight: 1080,
+      format: CompressFormat.webp,
     );
 
     if (result == null) return null;
@@ -268,31 +282,69 @@ class TripFormNotifier extends _$TripFormNotifier {
       }
 
       // 3. 서브 사진 목록 전체 압축 및 업로드 처리
-      final List<TripCommentModel> uploadedComments = [];
-      for (int i = 0; i < _currentImages.length; i++) {
-        final comment = _currentImages[i];
+      final uploadTasks = _currentImages.asMap().entries.map((entry) async {
+        final index = entry.key;
+        final comment = entry.value;
+
         if (comment.path.startsWith('http')) {
-          uploadedComments.add(comment.copyWith(tripId: savedTripId));
-          continue;
+          return comment.copyWith(tripId: savedTripId);
         }
 
-        // 실시간 원격 다이어트 압축 실행
         final compressedImg = await _compressImage(comment.path);
+
         if (compressedImg != null) {
-          final uniqueId = '${DateTime.now().microsecondsSinceEpoch}_$i';
-          final commentRef = _storage.ref().child('comments/$tripIdStr/$uniqueId.jpg');
+          final uniqueId = '${Uuid().v4()}_$index';
+          final commentRef = _storage.ref().child(
+            'comments/$tripIdStr/$uniqueId.webp',
+          );
           await commentRef.putFile(compressedImg);
           final downloadUrl = await commentRef.getDownloadURL();
 
-          uploadedComments.add(comment.copyWith(
+          return comment.copyWith(
             tripId: savedTripId,
-            path: downloadUrl, // 폰 주소를 영구적인 웹 주소로 치환 🌟
-          ));
+            path: downloadUrl,
+            comment: comment.comment,
+          );
         }
-      }
+        return null;
+      }).toList();
+
+      final uploadedComments = (await Future.wait(
+        uploadTasks,
+      )).whereType<TripCommentModel>().toList();
+
+      // ✅ path 기준 중복 제거 - 동일 이미지 중복 방지 최종 결과물 distinctcomments
+      final distinctComments = {
+        for (var c in uploadedComments) c.path: c,
+      }.values.toList();
+
+      // final List<TripCommentModel> uploadedComments = [];
+      // for (int i = 0; i < _currentImages.length; i++) {
+      //   final comment = _currentImages[i];
+      //   if (comment.path.startsWith('http')) {
+      //     uploadedComments.add(comment.copyWith(tripId: savedTripId));
+      //     continue;
+      //   }
+
+      //   // 실시간 원격 다이어트 압축 실행
+      //   final compressedImg = await _compressImage(comment.path);
+      //   if (compressedImg != null) {
+      //     final uniqueId = '${DateTime.now().microsecondsSinceEpoch}_$i';
+      //     final commentRef = _storage.ref().child('comments/$tripIdStr/$uniqueId.jpg');
+      //     await commentRef.putFile(compressedImg);
+      //     final downloadUrl = await commentRef.getDownloadURL();
+
+      //     uploadedComments.add(comment.copyWith(
+      //       tripId: savedTripId,
+      //       path: downloadUrl, // 폰 주소를 영구적인 웹 주소로 치환 🌟
+      //     ));
+      //   }
+      // }
 
       // 4. 파이어베이스 원격 메인 테이블 도큐먼트 기록 및 저장
-      final tripDoc = _firestore.collection('trips').doc(tripIdStr);
+      final tripDoc = _firestore
+          .collection(TripDbInfo.tableName)
+          .doc(tripIdStr);
       final finalModel = model.copyWith(
         id: savedTripId,
         title: trimmedTitle,
@@ -313,7 +365,7 @@ class TripFormNotifier extends _$TripFormNotifier {
 
       // 5. 파이어베이스 서브 컬렉션(Comments) 일괄 저장
       // 기존 업로드된 컬렉션을 원격에서 비우고 새로 밀어 넣음 (무결성 보장)
-      final commentsCol = tripDoc.collection('comments');
+      final commentsCol = tripDoc.collection(TripCommentDbInfo.tableName);
       final existingComments = await commentsCol.get();
       for (var doc in existingComments.docs) {
         await doc.reference.delete();
@@ -330,7 +382,7 @@ class TripFormNotifier extends _$TripFormNotifier {
       }
 
       // 6. 파이어베이스 서브 컬렉션(DailyNotes) 저장
-      final notesCol = tripDoc.collection('daily_notes');
+      final notesCol = tripDoc.collection(TripDailyNoteDbInfo.tableName);
       final existingNotes = await notesCol.get();
       for (var doc in existingNotes.docs) {
         await doc.reference.delete();
@@ -345,18 +397,20 @@ class TripFormNotifier extends _$TripFormNotifier {
         });
       }
 
-      await _repository.saveEntireTrip(finalModel, uploadedComments, dailyNotes);
-      
+      await _repository.saveEntireTrip(
+        finalModel,
+        // uploadedComments,
+        distinctComments,
+        dailyNotes,
+      );
+
       // 8. 강제 새로고침 리빌드 지시
       ref.invalidate(tripListProvider);
       ref.invalidate(tripFirstImageProvider(savedTripId));
       ref.invalidate(tripDetailProvider(savedTripId));
 
       state = AsyncData(
-        TripFormState(
-          trip: finalModel,
-          dailyNotes: dailyNotes,
-        ),
+        TripFormState(trip: finalModel, dailyNotes: dailyNotes),
       );
     } catch (e) {
       state = AsyncError('클라우드 저장 실패: $e', StackTrace.current);
@@ -369,7 +423,7 @@ class TripFormNotifier extends _$TripFormNotifier {
     List<DailyNoteModel> dailyNotes,
   ) {
     _currentImages = comments;
-    _coverImagePath = travel.coverImagePath; 
+    _coverImagePath = travel.coverImagePath;
     state = AsyncData(TripFormState(trip: travel, dailyNotes: dailyNotes));
   }
 }
@@ -387,20 +441,26 @@ class TripDetail extends _$TripDetail {
   }
 
   Future<TripDetailState> _loadTripDetailFromFirebase(int tripId) async {
-    final tripDoc = _firestore.collection('trips').doc(tripId.toString());
-    
+    final tripDoc = _firestore
+        .collection(TripDbInfo.tableName)
+        .doc(tripId.toString());
+
     final tripGet = await tripDoc.get();
     if (!tripGet.exists) throw Exception("해당 일정을 원격지에서 찾을 수 없습니다.");
     final trip = TripModel.fromJson(tripGet.data()!);
 
     // 서브 컬렉션(comments) 획득
-    final commentsSnapshot = await tripDoc.collection('comments').get();
+    final commentsSnapshot = await tripDoc
+        .collection(TripCommentDbInfo.tableName)
+        .get();
     final comments = commentsSnapshot.docs
         .map((doc) => TripCommentModel.fromJson(doc.data()))
         .toList();
 
     // 서브 컬렉션(daily_notes) 획득
-    final notesSnapshot = await tripDoc.collection('daily_notes').get();
+    final notesSnapshot = await tripDoc
+        .collection(TripDailyNoteDbInfo.tableName)
+        .get();
     final dailyNotes = notesSnapshot.docs
         .map((doc) => DailyNoteModel.fromJson(doc.data()))
         .toList();
@@ -413,6 +473,26 @@ class TripDetail extends _$TripDetail {
       dailyNotes: dailyNotes,
     );
   }
+  // add comment 에서 사용하는 용도
+  Future<File?> _compressImage(String sourcePath) async {
+    final tempDir = await getTemporaryDirectory();
+    final targetPath = p.join(
+      tempDir.path,
+      "${Uuid().v4()}_compressed.webp", // UUID로 고유 파일명 보장
+    );
+
+    var result = await FlutterImageCompress.compressAndGetFile(
+      sourcePath,
+      targetPath,
+      quality: 75,
+      minWidth: 1080,
+      minHeight: 1080,
+      format: CompressFormat.webp,
+    );
+
+    if (result == null) return null;
+    return File(result.path);
+  }
 
   Future<void> addComment({
     required String path,
@@ -420,16 +500,34 @@ class TripDetail extends _$TripDetail {
   }) async {
     state = const AsyncValue.loading();
     state = await AsyncValue.guard(() async {
-      final tripDoc = _firestore.collection('trips').doc(tripId.toString());
-      final commentsCol = tripDoc.collection('comments');
+      final tripDoc = _firestore
+          .collection(TripDbInfo.tableName)
+          .doc(tripId.toString());
+      final commentsCol = tripDoc.collection(TripCommentDbInfo.tableName);
 
       // 새 이미지 물리 스토리지 업로드
       String remoteUrl = path;
+
       if (!path.startsWith('http')) {
-        final file = File(path);
-        final ref = FirebaseStorage.instance.ref().child('comments/$tripId/${DateTime.now().microsecondsSinceEpoch}.jpg');
-        await ref.putFile(file);
-        remoteUrl = await ref.getDownloadURL();
+        final compressedFile = await _compressImage(path);
+
+        if (compressedFile != null) {
+          final uniqueId = Uuid().v4(); // ✅ UUID로 고유화
+          final ref = FirebaseStorage.instance.ref().child(
+            'comments/$tripId/$uniqueId.webp',
+          );
+          await ref.putFile(compressedFile);
+          remoteUrl = await ref.getDownloadURL();
+
+          await ref.putFile(compressedFile);
+          remoteUrl = await ref.getDownloadURL();
+        }
+        // final file = File(path);
+        // final ref = FirebaseStorage.instance.ref().child(
+        //   'comments/$tripId/${DateTime.now().microsecondsSinceEpoch}.jpg',
+        // );
+        // await ref.putFile(file);
+        // remoteUrl = await ref.getDownloadURL();
       }
 
       final commentId = DateTime.now().millisecondsSinceEpoch.toString();
@@ -444,19 +542,39 @@ class TripDetail extends _$TripDetail {
     });
   }
 
+  Future<void> updateCommentOnServer({
+    required String commentId,
+    required String newComment,
+  }) async {
+    final tripDoc = _firestore
+        .collection(TripDbInfo.tableName)
+        .doc(tripId.toString());
+    final commentsCol = tripDoc.collection(TripCommentDbInfo.tableName);
+
+    await commentsCol.doc(commentId).update({'comment': newComment});
+
+    // tripDetailProvider 새로고침
+    ref.invalidate(tripDetailProvider(tripId));
+  }
+
   Future<void> saveDailyNote({
     required int dayCount,
     required String comment,
   }) async {
     state = const AsyncValue.loading();
     state = await AsyncValue.guard(() async {
-      final tripDoc = _firestore.collection('trips').doc(tripId.toString());
-      await tripDoc.collection('daily_notes').doc(dayCount.toString()).set({
-        'id': dayCount,
-        'tripId': tripId,
-        'dayCount': dayCount,
-        'comment': comment,
-      }, SetOptions(merge: true));
+      final tripDoc = _firestore
+          .collection(TripDbInfo.tableName)
+          .doc(tripId.toString());
+      await tripDoc
+          .collection(TripDailyNoteDbInfo.tableName)
+          .doc(dayCount.toString())
+          .set({
+            'id': dayCount,
+            'tripId': tripId,
+            'dayCount': dayCount,
+            'comment': comment,
+          }, SetOptions(merge: true));
 
       return _loadTripDetailFromFirebase(tripId);
     });
@@ -467,15 +585,22 @@ class TripDetail extends _$TripDetail {
 Future<String?> tripFirstImage(Ref ref, int tripId) async {
   final firestore = FirebaseFirestore.instance;
   try {
-    final doc = await firestore.collection('trips').doc(tripId.toString()).get();
+    final doc = await firestore
+        .collection(TripDbInfo.tableName)
+        .doc(tripId.toString())
+        .get();
     if (doc.exists) {
       final trip = TripModel.fromJson(doc.data()!);
       if (trip.coverImagePath != null && trip.coverImagePath!.isNotEmpty) {
         return trip.coverImagePath;
       }
     }
-    
-    final commentsSnapshot = await firestore.collection('trips').doc(tripId.toString()).collection('comments').get();
+
+    final commentsSnapshot = await firestore
+        .collection(TripDbInfo.tableName)
+        .doc(tripId.toString())
+        .collection(TripCommentDbInfo.tableName)
+        .get();
     if (commentsSnapshot.docs.isNotEmpty) {
       return commentsSnapshot.docs.first.data()['path'] as String?;
     }

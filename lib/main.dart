@@ -1,7 +1,5 @@
-import 'package:firebase_app_check/firebase_app_check.dart';
-import 'package:firebase_core/firebase_core.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:trip/firebase_options.dart';
@@ -16,14 +14,6 @@ void main() async {
   // 2. Firebase 초기화
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
-  // // App Check는 배포 환경에 맞춰 변경 필수
-  // await FirebaseAppCheck.instance.activate(
-  //   androidProvider: kDebugMode
-  //       ? AndroidProvider.debug
-  //       : AndroidProvider.playIntegrity,
-  //   appleProvider: kDebugMode ? AppleProvider.debug : AppleProvider.appAttest,
-  // );
-  // 4. 데이터 마이그레이션 실행
   runApp(const ProviderScope(child: MyApp()));
 }
 

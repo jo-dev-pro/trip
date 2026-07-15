@@ -90,13 +90,15 @@ class _CreateScreenState extends ConsumerState<CreateScreen> {
       return;
     }
 
-    if (currentImages.isEmpty) {
-      _showWarningSnackBar('최소 한 장 이상의 이미지를 등록해주세요.');
+    if (model.endDate!.isBefore(model.startDate!)) {
+      _showWarningSnackBar('종료일이 시작일보다 작습니다.');
       return;
     }
 
     // tripFormProvider 내부에서 고용량 원본 파일 압축 후 파이어베이스 전송 수행
-    await ref.read(tripFormProvider.notifier).save(
+    await ref
+        .read(tripFormProvider.notifier)
+        .save(
           title: _titleCtrl.text.trim(),
           place: _placeCtrl.text.trim(),
           note: _noteCtrl.text.trim(),
