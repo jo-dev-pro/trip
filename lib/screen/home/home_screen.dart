@@ -6,12 +6,12 @@ import 'package:intl/intl.dart';
 import 'package:cached_network_image/cached_network_image.dart'; // 💡 캐싱 위젯 추가
 
 import '../../common/route/route.dart';
+import '../../common/widget/popscope.dart';
 import '../../model/trip_model.dart';
+import '../../provider/trip_form_provider.dart';
 import '../../provider/trip_provider.dart';
 import '../create/create_screen.dart';
 import 'widget/build_empty_state.dart';
-
-import '../../common/widget/popscope.dart';
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
@@ -23,6 +23,7 @@ class HomeScreen extends ConsumerWidget {
     return JPopScope(
       child: DefaultTabController(
         length: 2,
+        initialIndex: 0, // 항상 첫 번째 탭부터 시작
         child: Scaffold(
           backgroundColor: const Color(0xFFF4F6FA),
           appBar: AppBar(
@@ -39,7 +40,6 @@ class HomeScreen extends ConsumerWidget {
                   await Navigator.of(context).push(
                     MaterialPageRoute(builder: (_) => const CreateScreen()),
                   );
-                  ref.read(tripListProvider.notifier).refresh();
                 },
                 icon: const Icon(
                   Icons.add_location_alt_outlined,
@@ -61,7 +61,7 @@ class HomeScreen extends ConsumerWidget {
                   radius: 20,
                   child: const Icon(
                     Icons.settings_outlined,
-                    color: Colors.white, 
+                    color: Colors.white,
                     size: 22,
                   ),
                 ),
@@ -180,6 +180,7 @@ class HomeScreen extends ConsumerWidget {
         double bottomMargin = (index == totalCount - 1) ? 40 : 16;
 
         return Card(
+          color: Color(0xFFF4F6FA),
           margin: EdgeInsets.only(bottom: bottomMargin),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),

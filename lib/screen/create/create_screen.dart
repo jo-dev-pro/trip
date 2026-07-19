@@ -2,15 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../model/daily_note_model.dart';
-import '../../provider/trip_detail_state.dart';
-import '../../provider/trip_provider.dart';
-import '../../screen/widget/date_button.dart';
-import '../../screen/widget/field_label.dart';
-import '../../screen/widget/image_grid.dart';
-import '../../screen/widget/image_picker_sheet.dart';
-import '../../screen/widget/section_card.dart';
-import '../../screen/widget/styled_text_field.dart';
-
+import '../../provider/trip_form_provider.dart';
+import '../../common/widget/date_button.dart';
+import '../../common/widget/field_label.dart';
+import '../../common/widget/image_grid.dart';
+import '../../common/widget/image_picker_sheet.dart';
+import '../../common/widget/section_card.dart';
+import '../../common/widget/styled_text_field.dart';
 import '../../common/util/loaders/loaders.dart';
 
 /// ── 💾 [클라우드 저장 대응형] 여행 신규 등록 화면 ──
@@ -50,15 +48,17 @@ class _CreateScreenState extends ConsumerState<CreateScreen> {
         child: child!,
       ),
     );
-    if (picked == null) return;
+
+    if (!mounted || picked == null) return;
 
     final notifier = ref.read(tripFormProvider.notifier);
 
-    if (isStart) {
-      notifier.updateStartDate(picked);
-    } else {
-      notifier.updateEndDate(picked);
-    }
+    // ✅ 날짜 검증 포함 업데이트
+    notifier.updateDateWithValidation(
+      isStart: isStart,
+      picked: picked,
+      context: context,
+    );
   }
 
   // 갤러리 멀티 픽커 시트 호출
@@ -70,48 +70,6 @@ class _CreateScreenState extends ConsumerState<CreateScreen> {
       isDismissible: false,
       enableDrag: false,
       builder: (_) => const ImagePickerSheet(),
-    );
-  }
-
-  // 저장 처리 핸들러 (파이어베이스 연동 규격 검증)
-  Future<void> _onSave(List<dynamic> currentImages) async {
-    FocusScope.of(context).unfocus();
-
-    if (!_formKey.currentState!.validate()) {
-      return;
-    }
-
-    final formState = ref.read(tripFormProvider);
-    final formValue = formState.value;
-    final model = formValue?.trip;
-
-    if (model == null || model.startDate == null || model.endDate == null) {
-      _showWarningSnackBar('여행 기간을 선택해주세요.');
-      return;
-    }
-
-    if (model.endDate!.isBefore(model.startDate!)) {
-      _showWarningSnackBar('종료일이 시작일보다 작습니다.');
-      return;
-    }
-
-    // tripFormProvider 내부에서 고용량 원본 파일 압축 후 파이어베이스 전송 수행
-    await ref
-        .read(tripFormProvider.notifier)
-        .save(
-          title: _titleCtrl.text.trim(),
-          place: _placeCtrl.text.trim(),
-          note: _noteCtrl.text.trim(),
-        );
-  }
-
-  void _showWarningSnackBar(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: Colors.orange,
-        behavior: SnackBarBehavior.floating,
-      ),
     );
   }
 
@@ -304,7 +262,7 @@ class _CreateScreenState extends ConsumerState<CreateScreen> {
                   const SizedBox(height: 12),
 
                   // 이미지 첨부 그리드 섹션
-                  SectionCard(
+                  SectionCard(  
                     children: [
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -330,9 +288,11 @@ class _CreateScreenState extends ConsumerState<CreateScreen> {
                       if (currentImages.isNotEmpty) ...[
                         const SizedBox(height: 12),
                         ImageGrid(
-                          images: currentImages,
-                          onRemove: notifier.removeImage,
-                          onCommentChanged: notifier.updateImageComment,
+                          images: notifier.currentImages,
+                          onRemove: (i) =>
+                              notifier.removeImage(i), // tripId 없음 → Temp 실행
+                          onCommentChanged: (i, v) =>
+                              notifier.updateImageComment(i, v),
                           coverImagePath: notifier.coverImagePath,
                           onCoverImageChanged: notifier.setCoverImage,
                         ),
@@ -347,7 +307,40 @@ class _CreateScreenState extends ConsumerState<CreateScreen> {
                     width: double.infinity,
                     height: 52,
                     child: ElevatedButton(
-                      onPressed: isSaving ? null : () => _onSave(currentImages),
+                      onPressed: isSaving
+                          ? null
+                          : () async {
+                              FocusScope.of(context).unfocus();
+
+                              if (!_formKey.currentState!.validate()) {
+                                return;
+                              }
+
+                              final formState = ref.read(tripFormProvider);
+                              final formValue = formState.value;
+                              final model = formValue?.trip;
+
+                              // 🔹 필수 값 검증
+                              if (model == null ||
+                                  model.startDate == null ||
+                                  model.endDate == null) {
+                                JLoaders.errorSnackBar(
+                                  context,
+                                  title: '오류',
+                                  message: '여행 기간을 선택해주세요.',
+                                );
+                                return;
+                              }
+
+                              // 🔹 저장 호출
+                              await ref
+                                  .read(tripFormProvider.notifier)
+                                  .save(
+                                    title: _titleCtrl.text.trim(),
+                                    place: _placeCtrl.text.trim(),
+                                    note: _noteCtrl.text.trim(),
+                                  );
+                            },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.indigo.shade700,
                         foregroundColor: Colors.white,

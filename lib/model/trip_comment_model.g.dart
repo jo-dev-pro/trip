@@ -8,8 +8,8 @@ part of 'trip_comment_model.dart';
 
 _TripCommentModel _$TripCommentModelFromJson(Map<String, dynamic> json) =>
     _TripCommentModel(
-      id: (json['id'] as num?)?.toInt(),
-      tripId: (json['tripId'] as num?)?.toInt(),
+      id: json['id'] as String?,
+      tripId: json['tripId'] as String?,
       path: json['path'] as String,
       comment: json['comment'] as String? ?? '',
     );

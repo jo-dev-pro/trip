@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../provider/trip_detail_state.dart';
+import '../../provider/trip_detail_provider.dart';
 import '../../screen/settings/settings_screen.dart';
 import '../../screen/edit/edit_screen.dart';
 import '../../screen/home/detail/detail.dart';
@@ -24,7 +24,7 @@ class JAppRoute {
         path: JRoutes.detail,
         name: JRoutes.detail,
         builder: (context, state) {
-          final tripId = state.extra as int? ?? 0;
+          final tripId = state.extra as String? ?? '';
           return DetailScreen(id: tripId);
         },
       ),

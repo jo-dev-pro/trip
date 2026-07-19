@@ -8,8 +8,8 @@ part of 'daily_note_model.dart';
 
 _DailyNoteModel _$DailyNoteModelFromJson(Map<String, dynamic> json) =>
     _DailyNoteModel(
-      id: (json['id'] as num?)?.toInt(),
-      tripId: (json['tripId'] as num?)?.toInt(),
+      id: json['id'] as String?,
+      tripId: json['tripId'] as String?,
       dayCount: (json['dayCount'] as num?)?.toInt(),
       comment: json['comment'] as String? ?? '',
     );

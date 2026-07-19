@@ -6,8 +6,8 @@ part 'trip_comment_model.g.dart';
 @freezed
 abstract class TripCommentModel with _$TripCommentModel {
   factory TripCommentModel({
-    int? id,
-    int? tripId, // 외래키 관계 연결용 ID
+    String? id,
+    String? tripId, // 외래키 관계 연결용 ID
     required String path,
     @Default('') String comment,
   }) = _TripCommentModel;

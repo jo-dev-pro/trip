@@ -15,7 +15,7 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$DailyNoteModel {
 
- int? get id; int? get tripId;// 외래키 관계 연결용 ID
+ String? get id; String? get tripId;// 외래키 관계 연결용 ID
  int? get dayCount;// 날짜 카운트
  String get comment;
 /// Create a copy of DailyNoteModel
@@ -50,7 +50,7 @@ abstract mixin class $DailyNoteModelCopyWith<$Res>  {
   factory $DailyNoteModelCopyWith(DailyNoteModel value, $Res Function(DailyNoteModel) _then) = _$DailyNoteModelCopyWithImpl;
 @useResult
 $Res call({
- int? id, int? tripId, int? dayCount, String comment
+ String? id, String? tripId, int? dayCount, String comment
 });
 
 
@@ -70,8 +70,8 @@ class _$DailyNoteModelCopyWithImpl<$Res>
 @pragma('vm:prefer-inline') @override $Res call({Object? id = freezed,Object? tripId = freezed,Object? dayCount = freezed,Object? comment = null,}) {
   return _then(_self.copyWith(
 id: freezed == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
-as int?,tripId: freezed == tripId ? _self.tripId : tripId // ignore: cast_nullable_to_non_nullable
-as int?,dayCount: freezed == dayCount ? _self.dayCount : dayCount // ignore: cast_nullable_to_non_nullable
+as String?,tripId: freezed == tripId ? _self.tripId : tripId // ignore: cast_nullable_to_non_nullable
+as String?,dayCount: freezed == dayCount ? _self.dayCount : dayCount // ignore: cast_nullable_to_non_nullable
 as int?,comment: null == comment ? _self.comment : comment // ignore: cast_nullable_to_non_nullable
 as String,
   ));
@@ -158,7 +158,7 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( int? id,  int? tripId,  int? dayCount,  String comment)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String? id,  String? tripId,  int? dayCount,  String comment)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _DailyNoteModel() when $default != null:
 return $default(_that.id,_that.tripId,_that.dayCount,_that.comment);case _:
@@ -179,7 +179,7 @@ return $default(_that.id,_that.tripId,_that.dayCount,_that.comment);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( int? id,  int? tripId,  int? dayCount,  String comment)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String? id,  String? tripId,  int? dayCount,  String comment)  $default,) {final _that = this;
 switch (_that) {
 case _DailyNoteModel():
 return $default(_that.id,_that.tripId,_that.dayCount,_that.comment);case _:
@@ -199,7 +199,7 @@ return $default(_that.id,_that.tripId,_that.dayCount,_that.comment);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( int? id,  int? tripId,  int? dayCount,  String comment)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String? id,  String? tripId,  int? dayCount,  String comment)?  $default,) {final _that = this;
 switch (_that) {
 case _DailyNoteModel() when $default != null:
 return $default(_that.id,_that.tripId,_that.dayCount,_that.comment);case _:
@@ -217,8 +217,8 @@ class _DailyNoteModel implements DailyNoteModel {
    _DailyNoteModel({this.id, this.tripId, this.dayCount, this.comment = ''});
   factory _DailyNoteModel.fromJson(Map<String, dynamic> json) => _$DailyNoteModelFromJson(json);
 
-@override final  int? id;
-@override final  int? tripId;
+@override final  String? id;
+@override final  String? tripId;
 // 외래키 관계 연결용 ID
 @override final  int? dayCount;
 // 날짜 카운트
@@ -257,7 +257,7 @@ abstract mixin class _$DailyNoteModelCopyWith<$Res> implements $DailyNoteModelCo
   factory _$DailyNoteModelCopyWith(_DailyNoteModel value, $Res Function(_DailyNoteModel) _then) = __$DailyNoteModelCopyWithImpl;
 @override @useResult
 $Res call({
- int? id, int? tripId, int? dayCount, String comment
+ String? id, String? tripId, int? dayCount, String comment
 });
 
 
@@ -277,8 +277,8 @@ class __$DailyNoteModelCopyWithImpl<$Res>
 @override @pragma('vm:prefer-inline') $Res call({Object? id = freezed,Object? tripId = freezed,Object? dayCount = freezed,Object? comment = null,}) {
   return _then(_DailyNoteModel(
 id: freezed == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
-as int?,tripId: freezed == tripId ? _self.tripId : tripId // ignore: cast_nullable_to_non_nullable
-as int?,dayCount: freezed == dayCount ? _self.dayCount : dayCount // ignore: cast_nullable_to_non_nullable
+as String?,tripId: freezed == tripId ? _self.tripId : tripId // ignore: cast_nullable_to_non_nullable
+as String?,dayCount: freezed == dayCount ? _self.dayCount : dayCount // ignore: cast_nullable_to_non_nullable
 as int?,comment: null == comment ? _self.comment : comment // ignore: cast_nullable_to_non_nullable
 as String,
   ));

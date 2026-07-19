@@ -15,7 +15,7 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$TripCommentModel {
 
- int? get id; int? get tripId;// 외래키 관계 연결용 ID
+ String? get id; String? get tripId;// 외래키 관계 연결용 ID
  String get path; String get comment;
 /// Create a copy of TripCommentModel
 /// with the given fields replaced by the non-null parameter values.
@@ -49,7 +49,7 @@ abstract mixin class $TripCommentModelCopyWith<$Res>  {
   factory $TripCommentModelCopyWith(TripCommentModel value, $Res Function(TripCommentModel) _then) = _$TripCommentModelCopyWithImpl;
 @useResult
 $Res call({
- int? id, int? tripId, String path, String comment
+ String? id, String? tripId, String path, String comment
 });
 
 
@@ -69,8 +69,8 @@ class _$TripCommentModelCopyWithImpl<$Res>
 @pragma('vm:prefer-inline') @override $Res call({Object? id = freezed,Object? tripId = freezed,Object? path = null,Object? comment = null,}) {
   return _then(_self.copyWith(
 id: freezed == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
-as int?,tripId: freezed == tripId ? _self.tripId : tripId // ignore: cast_nullable_to_non_nullable
-as int?,path: null == path ? _self.path : path // ignore: cast_nullable_to_non_nullable
+as String?,tripId: freezed == tripId ? _self.tripId : tripId // ignore: cast_nullable_to_non_nullable
+as String?,path: null == path ? _self.path : path // ignore: cast_nullable_to_non_nullable
 as String,comment: null == comment ? _self.comment : comment // ignore: cast_nullable_to_non_nullable
 as String,
   ));
@@ -157,7 +157,7 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( int? id,  int? tripId,  String path,  String comment)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String? id,  String? tripId,  String path,  String comment)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _TripCommentModel() when $default != null:
 return $default(_that.id,_that.tripId,_that.path,_that.comment);case _:
@@ -178,7 +178,7 @@ return $default(_that.id,_that.tripId,_that.path,_that.comment);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( int? id,  int? tripId,  String path,  String comment)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String? id,  String? tripId,  String path,  String comment)  $default,) {final _that = this;
 switch (_that) {
 case _TripCommentModel():
 return $default(_that.id,_that.tripId,_that.path,_that.comment);case _:
@@ -198,7 +198,7 @@ return $default(_that.id,_that.tripId,_that.path,_that.comment);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( int? id,  int? tripId,  String path,  String comment)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String? id,  String? tripId,  String path,  String comment)?  $default,) {final _that = this;
 switch (_that) {
 case _TripCommentModel() when $default != null:
 return $default(_that.id,_that.tripId,_that.path,_that.comment);case _:
@@ -216,8 +216,8 @@ class _TripCommentModel implements TripCommentModel {
    _TripCommentModel({this.id, this.tripId, required this.path, this.comment = ''});
   factory _TripCommentModel.fromJson(Map<String, dynamic> json) => _$TripCommentModelFromJson(json);
 
-@override final  int? id;
-@override final  int? tripId;
+@override final  String? id;
+@override final  String? tripId;
 // 외래키 관계 연결용 ID
 @override final  String path;
 @override@JsonKey() final  String comment;
@@ -255,7 +255,7 @@ abstract mixin class _$TripCommentModelCopyWith<$Res> implements $TripCommentMod
   factory _$TripCommentModelCopyWith(_TripCommentModel value, $Res Function(_TripCommentModel) _then) = __$TripCommentModelCopyWithImpl;
 @override @useResult
 $Res call({
- int? id, int? tripId, String path, String comment
+ String? id, String? tripId, String path, String comment
 });
 
 
@@ -275,8 +275,8 @@ class __$TripCommentModelCopyWithImpl<$Res>
 @override @pragma('vm:prefer-inline') $Res call({Object? id = freezed,Object? tripId = freezed,Object? path = null,Object? comment = null,}) {
   return _then(_TripCommentModel(
 id: freezed == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
-as int?,tripId: freezed == tripId ? _self.tripId : tripId // ignore: cast_nullable_to_non_nullable
-as int?,path: null == path ? _self.path : path // ignore: cast_nullable_to_non_nullable
+as String?,tripId: freezed == tripId ? _self.tripId : tripId // ignore: cast_nullable_to_non_nullable
+as String?,path: null == path ? _self.path : path // ignore: cast_nullable_to_non_nullable
 as String,comment: null == comment ? _self.comment : comment // ignore: cast_nullable_to_non_nullable
 as String,
   ));

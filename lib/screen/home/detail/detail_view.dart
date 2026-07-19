@@ -1,7 +1,8 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:cached_network_image/cached_network_image.dart'; // 💡 임포트 추가
-import 'package:trip/model/trip_comment_model.dart';
+import 'package:cached_network_image/cached_network_image.dart';
+
+import '../../../model/trip_comment_model.dart'; 
 
 /// ─── 💡 [풀스크린 버전] 초고속 캐싱이 내장된 사진 뷰어 ───
 class ImageCommentViewer extends StatefulWidget {

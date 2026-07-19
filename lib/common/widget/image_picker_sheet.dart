@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 
-import '../../provider/trip_provider.dart';
+import '../../provider/trip_form_provider.dart';
 
 class ImagePickerSheet extends ConsumerStatefulWidget {
   const ImagePickerSheet({super.key});

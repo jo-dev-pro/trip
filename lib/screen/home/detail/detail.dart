@@ -2,16 +2,17 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
-import 'package:cached_network_image/cached_network_image.dart'; // 💡 초고속 이미지 캐싱 라이브러리
-import 'package:trip/model/daily_note_model.dart';
-import 'package:trip/model/trip_comment_model.dart';
-import 'package:trip/model/trip_model.dart';
-import 'package:trip/provider/trip_provider.dart'; 
-import 'package:trip/screen/edit/edit_screen.dart';
-import 'package:trip/screen/home/detail/detail_view.dart'; // ImageCommentViewer가 들어있는 파일
+import 'package:cached_network_image/cached_network_image.dart';
+
+import '../../../model/daily_note_model.dart';
+import '../../../model/trip_comment_model.dart';
+import '../../../model/trip_model.dart';
+import '../../../provider/trip_detail_provider.dart';
+import '../../edit/edit_screen.dart';
+import 'detail_view.dart';
 
 class DetailScreen extends ConsumerWidget {
-  final int id;
+  final String id;
 
   const DetailScreen({super.key, required this.id});
 
@@ -121,21 +122,30 @@ class DetailScreen extends ConsumerWidget {
                       // 💡 로컬/서버 동적 가상화 분기 처리 이미지 영역
                       firstImagePath != null
                           ? (firstImagePath.startsWith('http')
-                              ? CachedNetworkImage(
-                                  imageUrl: firstImagePath,
-                                  fit: BoxFit.cover,
-                                  placeholder: (context, url) => Container(
-                                    color: Colors.indigo.shade50,
-                                    child: const Center(
-                                      child: CircularProgressIndicator(strokeWidth: 2),
+                                ? CachedNetworkImage(
+                                    imageUrl: firstImagePath,
+                                    fit: BoxFit.cover,
+                                    placeholder: (context, url) => Container(
+                                      color: Colors.indigo.shade50,
+                                      child: const Center(
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                        ),
+                                      ),
                                     ),
-                                  ),
-                                  errorWidget: (context, url, error) => Container(
-                                    color: Colors.indigo.shade50,
-                                    child: const Icon(Icons.broken_image, color: Colors.grey),
-                                  ),
-                                )
-                              : Image.file(File(firstImagePath), fit: BoxFit.cover))
+                                    errorWidget: (context, url, error) =>
+                                        Container(
+                                          color: Colors.indigo.shade50,
+                                          child: const Icon(
+                                            Icons.broken_image,
+                                            color: Colors.grey,
+                                          ),
+                                        ),
+                                  )
+                                : Image.file(
+                                    File(firstImagePath),
+                                    fit: BoxFit.cover,
+                                  ))
                           : Container(
                               color: Colors.indigo.shade50,
                               child: Icon(
@@ -464,7 +474,8 @@ class DetailScreen extends ConsumerWidget {
     int index,
   ) {
     final item = comments[index];
-    final isNetwork = item.path.startsWith('http') || item.path.startsWith('https');
+    final isNetwork =
+        item.path.startsWith('http') || item.path.startsWith('https');
 
     return GestureDetector(
       onTap: () {
@@ -512,7 +523,7 @@ class DetailScreen extends ConsumerWidget {
                     ? CachedNetworkImage(
                         imageUrl: item.path,
                         fit: BoxFit.cover,
-                        memCacheWidth: 500, 
+                        memCacheWidth: 500,
                         memCacheHeight: 500,
                         placeholder: (context, url) => Container(
                           color: Colors.grey[100],
@@ -526,7 +537,10 @@ class DetailScreen extends ConsumerWidget {
                         ),
                         errorWidget: (context, url, error) => Container(
                           color: Colors.grey[200],
-                          child: const Icon(Icons.broken_image, color: Colors.grey),
+                          child: const Icon(
+                            Icons.broken_image,
+                            color: Colors.grey,
+                          ),
                         ),
                       )
                     : Image.file(
@@ -534,7 +548,10 @@ class DetailScreen extends ConsumerWidget {
                         fit: BoxFit.cover,
                         errorBuilder: (context, error, stackTrace) => Container(
                           color: Colors.grey[200],
-                          child: const Icon(Icons.broken_image, color: Colors.grey),
+                          child: const Icon(
+                            Icons.broken_image,
+                            color: Colors.grey,
+                          ),
                         ),
                       ),
               ),

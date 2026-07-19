@@ -6,8 +6,8 @@ part 'daily_note_model.g.dart';
 @freezed
 abstract class DailyNoteModel with _$DailyNoteModel {
   factory DailyNoteModel({
-    int? id,
-    int? tripId, // 외래키 관계 연결용 ID
+    String? id,
+    String? tripId, // 외래키 관계 연결용 ID
     int? dayCount, // 날짜 카운트
     @Default('') String comment,
   }) = _DailyNoteModel;

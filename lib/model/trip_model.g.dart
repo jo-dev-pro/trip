@@ -7,7 +7,7 @@ part of 'trip_model.dart';
 // **************************************************************************
 
 _TripModel _$TripModelFromJson(Map<String, dynamic> json) => _TripModel(
-  id: (json['id'] as num?)?.toInt(),
+  id: json['id'] as String?,
   title: json['title'] as String,
   place: json['place'] as String,
   startDate: json['startDate'] == null

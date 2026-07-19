@@ -15,7 +15,7 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$TripModel {
 
- int? get id; String get title; String get place; DateTime? get startDate; DateTime? get endDate; String? get note; String? get coverImagePath;
+ String? get id; String get title; String get place; DateTime? get startDate; DateTime? get endDate; String? get note; String? get coverImagePath;
 /// Create a copy of TripModel
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -48,7 +48,7 @@ abstract mixin class $TripModelCopyWith<$Res>  {
   factory $TripModelCopyWith(TripModel value, $Res Function(TripModel) _then) = _$TripModelCopyWithImpl;
 @useResult
 $Res call({
- int? id, String title, String place, DateTime? startDate, DateTime? endDate, String? note, String? coverImagePath
+ String? id, String title, String place, DateTime? startDate, DateTime? endDate, String? note, String? coverImagePath
 });
 
 
@@ -68,7 +68,7 @@ class _$TripModelCopyWithImpl<$Res>
 @pragma('vm:prefer-inline') @override $Res call({Object? id = freezed,Object? title = null,Object? place = null,Object? startDate = freezed,Object? endDate = freezed,Object? note = freezed,Object? coverImagePath = freezed,}) {
   return _then(_self.copyWith(
 id: freezed == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
-as int?,title: null == title ? _self.title : title // ignore: cast_nullable_to_non_nullable
+as String?,title: null == title ? _self.title : title // ignore: cast_nullable_to_non_nullable
 as String,place: null == place ? _self.place : place // ignore: cast_nullable_to_non_nullable
 as String,startDate: freezed == startDate ? _self.startDate : startDate // ignore: cast_nullable_to_non_nullable
 as DateTime?,endDate: freezed == endDate ? _self.endDate : endDate // ignore: cast_nullable_to_non_nullable
@@ -159,7 +159,7 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( int? id,  String title,  String place,  DateTime? startDate,  DateTime? endDate,  String? note,  String? coverImagePath)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String? id,  String title,  String place,  DateTime? startDate,  DateTime? endDate,  String? note,  String? coverImagePath)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _TripModel() when $default != null:
 return $default(_that.id,_that.title,_that.place,_that.startDate,_that.endDate,_that.note,_that.coverImagePath);case _:
@@ -180,7 +180,7 @@ return $default(_that.id,_that.title,_that.place,_that.startDate,_that.endDate,_
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( int? id,  String title,  String place,  DateTime? startDate,  DateTime? endDate,  String? note,  String? coverImagePath)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String? id,  String title,  String place,  DateTime? startDate,  DateTime? endDate,  String? note,  String? coverImagePath)  $default,) {final _that = this;
 switch (_that) {
 case _TripModel():
 return $default(_that.id,_that.title,_that.place,_that.startDate,_that.endDate,_that.note,_that.coverImagePath);case _:
@@ -200,7 +200,7 @@ return $default(_that.id,_that.title,_that.place,_that.startDate,_that.endDate,_
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( int? id,  String title,  String place,  DateTime? startDate,  DateTime? endDate,  String? note,  String? coverImagePath)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String? id,  String title,  String place,  DateTime? startDate,  DateTime? endDate,  String? note,  String? coverImagePath)?  $default,) {final _that = this;
 switch (_that) {
 case _TripModel() when $default != null:
 return $default(_that.id,_that.title,_that.place,_that.startDate,_that.endDate,_that.note,_that.coverImagePath);case _:
@@ -218,7 +218,7 @@ class _TripModel extends TripModel {
    _TripModel({this.id, required this.title, required this.place, this.startDate, this.endDate, this.note, this.coverImagePath}): super._();
   factory _TripModel.fromJson(Map<String, dynamic> json) => _$TripModelFromJson(json);
 
-@override final  int? id;
+@override final  String? id;
 @override final  String title;
 @override final  String place;
 @override final  DateTime? startDate;
@@ -259,7 +259,7 @@ abstract mixin class _$TripModelCopyWith<$Res> implements $TripModelCopyWith<$Re
   factory _$TripModelCopyWith(_TripModel value, $Res Function(_TripModel) _then) = __$TripModelCopyWithImpl;
 @override @useResult
 $Res call({
- int? id, String title, String place, DateTime? startDate, DateTime? endDate, String? note, String? coverImagePath
+ String? id, String title, String place, DateTime? startDate, DateTime? endDate, String? note, String? coverImagePath
 });
 
 
@@ -279,7 +279,7 @@ class __$TripModelCopyWithImpl<$Res>
 @override @pragma('vm:prefer-inline') $Res call({Object? id = freezed,Object? title = null,Object? place = null,Object? startDate = freezed,Object? endDate = freezed,Object? note = freezed,Object? coverImagePath = freezed,}) {
   return _then(_TripModel(
 id: freezed == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
-as int?,title: null == title ? _self.title : title // ignore: cast_nullable_to_non_nullable
+as String?,title: null == title ? _self.title : title // ignore: cast_nullable_to_non_nullable
 as String,place: null == place ? _self.place : place // ignore: cast_nullable_to_non_nullable
 as String,startDate: freezed == startDate ? _self.startDate : startDate // ignore: cast_nullable_to_non_nullable
 as DateTime?,endDate: freezed == endDate ? _self.endDate : endDate // ignore: cast_nullable_to_non_nullable

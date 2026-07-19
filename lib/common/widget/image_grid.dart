@@ -1,18 +1,21 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:cached_network_image/cached_network_image.dart'; // 💡 캐싱 패키지 적용
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:trip/provider/trip_form_provider.dart';
 
 import '../../model/trip_comment_model.dart';
 
 /// ── 💡 [클라우드 대응형] 선택 이미지 목록 그리드 위젯 ──
-class ImageGrid extends StatelessWidget {
+class ImageGrid extends ConsumerWidget {
   const ImageGrid({
     super.key,
     required this.images,
     required this.onRemove,
     required this.onCommentChanged,
-    this.coverImagePath,         // 현재 대표 이미지 경로 (로컬 또는 웹 URL)
-    this.onCoverImageChanged,    // 대표 이미지 변경 콜백
+    this.coverImagePath, // 현재 대표 이미지 경로 (로컬 또는 웹 URL)
+    this.onCoverImageChanged, // 대표 이미지 변경 콜백
+    this.tripId,
   });
 
   final List<TripCommentModel> images;
@@ -20,9 +23,13 @@ class ImageGrid extends StatelessWidget {
   final void Function(int, String) onCommentChanged;
   final String? coverImagePath;
   final void Function(String? path)? onCoverImageChanged;
+  final String? tripId;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final notifier = ref.read(tripFormProvider.notifier);
+    final formState = ref.watch(tripFormProvider);
+
     return ListView.separated(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
@@ -30,9 +37,10 @@ class ImageGrid extends StatelessWidget {
       separatorBuilder: (_, _) => const SizedBox(height: 10),
       itemBuilder: (_, i) {
         final item = images[i];
-        
+
         // 💡 주소가 파이어베이스 원격 스토리지 경로(HTTP)인지 로컬 샌드박스 경로인지 판별
-        final isNetwork = item.path.startsWith('http') || item.path.startsWith('https');
+        final isNetwork =
+            item.path.startsWith('http') || item.path.startsWith('https');
 
         return Container(
           decoration: BoxDecoration(
@@ -60,7 +68,9 @@ class ImageGrid extends StatelessWidget {
                 child: Stack(
                   children: [
                     ClipRRect(
-                      borderRadius: const BorderRadius.horizontal(left: Radius.circular(12)),
+                      borderRadius: const BorderRadius.horizontal(
+                        left: Radius.circular(12),
+                      ),
                       child: SizedBox(
                         width: 90,
                         height: 90,
@@ -74,13 +84,18 @@ class ImageGrid extends StatelessWidget {
                                     child: SizedBox(
                                       width: 20,
                                       height: 20,
-                                      child: CircularProgressIndicator(strokeWidth: 1.5),
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 1.5,
+                                      ),
                                     ),
                                   ),
                                 ),
                                 errorWidget: (_, _, _) => Container(
                                   color: Colors.grey.shade200,
-                                  child: Icon(Icons.broken_image, color: Colors.grey.shade400),
+                                  child: Icon(
+                                    Icons.broken_image,
+                                    color: Colors.grey.shade400,
+                                  ),
                                 ),
                               )
                             : Image.file(
@@ -88,7 +103,10 @@ class ImageGrid extends StatelessWidget {
                                 fit: BoxFit.cover,
                                 errorBuilder: (_, _, _) => Container(
                                   color: Colors.grey.shade200,
-                                  child: Icon(Icons.broken_image, color: Colors.grey.shade400),
+                                  child: Icon(
+                                    Icons.broken_image,
+                                    color: Colors.grey.shade400,
+                                  ),
                                 ),
                               ),
                       ),
@@ -97,11 +115,25 @@ class ImageGrid extends StatelessWidget {
                     Positioned(
                       top: 4,
                       left: 4,
-                      child: Icon(
-                        coverImagePath == item.path ? Icons.star : Icons.star_border,
-                        color: coverImagePath == item.path ? Colors.amber : Colors.white,
-                        size: 20,
-                        shadows: const [Shadow(color: Colors.black45, blurRadius: 4)],
+                      child: GestureDetector(
+                        onTap: () {
+                          // ✅ 커버 이미지 선택 토글
+                          notifier.setCoverImage(
+                            coverImagePath == item.path ? null : item.path,
+                          );
+                        },
+                        child: Icon(
+                          coverImagePath == item.path
+                              ? Icons.star
+                              : Icons.star_border,
+                          color: coverImagePath == item.path
+                              ? Colors.red
+                              : Colors.yellow,
+                          size: 20,
+                          shadows: const [
+                            Shadow(color: Colors.black45, blurRadius: 4),
+                          ],
+                        ),
                       ),
                     ),
                   ],
@@ -118,7 +150,7 @@ class ImageGrid extends StatelessWidget {
                     decoration: InputDecoration(
                       hintText: '이미지 설명 (선택)',
                       hintStyle: TextStyle(
-                        color: Colors.grey.shade400, 
+                        color: Colors.grey.shade400,
                         fontSize: 13,
                       ),
                       border: InputBorder.none,
@@ -131,9 +163,20 @@ class ImageGrid extends StatelessWidget {
               ),
               // 이미지 개별 삭제 버튼
               IconButton(
-                icon: Icon(Icons.delete_outline,
-                    color: Colors.red.shade400, size: 20),
-                onPressed: () => onRemove(i),
+                icon: formState.isLoading
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : Icon(
+                        Icons.delete_outline,
+                        color: Colors.red.shade400,
+                        size: 20,
+                      ),
+                onPressed: formState.isLoading
+                    ? null
+                    : () => onRemove(i), // 🔹 등록/수정 여부는 Provider에서 처리
               ),
             ],
           ),

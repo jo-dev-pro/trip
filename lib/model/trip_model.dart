@@ -9,7 +9,7 @@ abstract class TripModel with _$TripModel {
   const TripModel._();
 
   factory TripModel({
-    int? id,
+    String? id,
     required String title,
     required String place,
     DateTime? startDate,
@@ -18,9 +18,9 @@ abstract class TripModel with _$TripModel {
     String? coverImagePath, // 💡 대표 이미지 경로
   }) = _TripModel;
 
-  factory TripModel.fromJson(Map<String, dynamic> json) => _$TripModelFromJson(json);
+  factory TripModel.fromJson(Map<String, dynamic> json) =>
+      _$TripModelFromJson(json);
 }
-
 
 // db 형식에 맞는 모델
 class TripDbInfo {
@@ -31,6 +31,5 @@ class TripDbInfo {
   static String startDate = 'startDate';
   static String endDate = 'endDate';
   static String note = 'note';
-  static String coverImagePath = 'coverImagePath'; // 💡 추가
+  static String coverImagePath = 'coverImagePath';
 }
-
