@@ -210,7 +210,7 @@ class _EditScreenState extends ConsumerState<EditScreen> {
 
           if (!mounted) return; // 위젯이 dispose되었으면 네비게이션 하지 않음
           // ✅ 저장 후 디테일 화면으로 이동
-          context.goNamed(JRoutes.detail, extra: tripId);
+          context.pushReplacementNamed(JRoutes.detail, extra: tripId);
         } else {
           // tripId가 없으면 그냥 pop
           context.pop();
