@@ -250,7 +250,7 @@ class TripFormNotifier extends _$TripFormNotifier {
   Future<void> removeImagePersist(int index, String tripId) async {
     if (index < 0 || index >= _currentImages.length) return;
 
-    state = const AsyncLoading(); // UI에서 자동으로 로딩 표시됨
+    // state = const AsyncLoading(); // UI에서 자동으로 로딩 표시됨(전체화면)
 
     // 1. 작업할 데이터 확보
     final imageToRemove = _currentImages[index];
@@ -387,11 +387,33 @@ class TripFormNotifier extends _$TripFormNotifier {
       // 3. [비즈니스 로직] 확보해둔 변수들 사용
       // _uploadComments 내부에서 _currentImages를 쓰고 있는데,
       // 이를 currentState.images로 바꾸는 것이 좋습니다.
-      final uploadedComments = await _uploadComments(tripIdStr);
+      final uploadedMap = await _uploadComments(tripIdStr);
+
+      // Map → List<TripCommentModel> 변환
+      final uploadedComments = uploadedMap.entries.map((e) {
+        // e.key = 로컬 경로, e.value = Storage URL
+        final original = _currentImages.firstWhere(
+          (c) => c.path == e.key,
+          orElse: () => TripCommentModel(path: e.value, comment: ''),
+        );
+        return original.copyWith(
+          tripId: tripIdStr,
+          path: e.value, // Storage URL
+          comment: original.comment, // ✅ 코멘트 유지
+        );
+      }).toList();
 
       String? coverImagePath = currentState.coverImagePath;
-      if (coverImagePath == null && uploadedComments.isNotEmpty) {
-        coverImagePath = uploadedComments.firstOrNull?.path;
+
+      // 대표 이미지가 null이면 첫 번째 업로드된 이미지 URL 사용
+      if (coverImagePath == null && uploadedMap.isNotEmpty) {
+        coverImagePath = uploadedMap.values.first;
+      }
+
+      // 대표 이미지가 로컬 경로라면 URL로 교체
+      if (coverImagePath != null && coverImagePath.startsWith('/data/')) {
+        coverImagePath =
+            uploadedMap[coverImagePath] ?? uploadedMap.values.first;
       }
 
       // 4. [Firestore 저장]
@@ -416,17 +438,21 @@ class TripFormNotifier extends _$TripFormNotifier {
           coverImagePath: coverImagePath,
         ),
       );
+
     } catch (e, st) {
       debugPrint("저장 실패: $e - $st");
       state = AsyncError(e, st);
     }
   }
 
-  Future<List<TripCommentModel>> _uploadComments(String tripIdStr) async {
-    final uploadTasks = _currentImages.map((comment) async {
+  Future<Map<String, String>> _uploadComments(String tripIdStr) async {
+    final tasks = _currentImages.map((comment) async {
+      // 이미 URL이면 그대로 매핑
       if (comment.path.startsWith('http')) {
-        return comment.copyWith(tripId: tripIdStr);
+        return MapEntry(comment.path, comment.path);
       }
+
+      // 로컬 파일 압축 후 업로드
       final compressedImg = await _compressImage(comment.path);
       if (compressedImg != null) {
         final uniqueId = Uuid().v4();
@@ -436,13 +462,17 @@ class TripFormNotifier extends _$TripFormNotifier {
         await commentRef.putFile(compressedImg);
 
         final downloadUrl = await commentRef.getDownloadURL();
-        return comment.copyWith(tripId: tripIdStr, path: downloadUrl);
+        return MapEntry(comment.path, downloadUrl);
       }
+
       return null;
     }).toList();
-    return (await Future.wait(
-      uploadTasks,
-    )).whereType<TripCommentModel>().toList();
+
+    // ✅ 병렬 업로드 실행
+    final results = await Future.wait(tasks);
+
+    // null 제거 후 Map으로 변환
+    return Map.fromEntries(results.whereType<MapEntry<String, String>>());
   }
 
   void setTravel(

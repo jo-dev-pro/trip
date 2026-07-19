@@ -291,8 +291,8 @@ class _CreateScreenState extends ConsumerState<CreateScreen> {
                           images: notifier.currentImages,
                           onRemove: (i) =>
                               notifier.removeImage(i), // tripId 없음 → Temp 실행
-                          onCommentChanged: (i, v) =>
-                              notifier.updateImageComment(i, v),
+                          // onCommentChanged: (i, v) =>
+                          //     notifier.updateImageComment(i, v),
                           coverImagePath: notifier.coverImagePath,
                           onCoverImageChanged: notifier.setCoverImage,
                         ),

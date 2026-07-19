@@ -47,14 +47,14 @@ class DetailScreen extends ConsumerWidget {
         // 날짜 가드 코드
         final formattedStartDate = trip.startDate != null
             ? DateFormat('yyyy. MM. dd').format(trip.startDate!)
-            : '-';
+            : '...';   // 로딩 중에는 ... 표시
         final formattedEndDate = trip.endDate != null
             ? DateFormat('yyyy. MM. dd').format(trip.endDate!)
-            : '-';
+            : '...';
 
         final int totalDays = (trip.startDate != null && trip.endDate != null)
             ? trip.endDate!.difference(trip.startDate!).inDays + 1
-            : 1;
+            : 0;  // 로딩 중에는 0일로 표시
 
         return Scaffold(
           backgroundColor: const Color(0xFFF4F6FA),

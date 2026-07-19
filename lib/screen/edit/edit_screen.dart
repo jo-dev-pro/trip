@@ -206,9 +206,15 @@ class _EditScreenState extends ConsumerState<EditScreen> {
         final tripId = widget.tripState.trip.id;
         if (tripId != null) {
           ref.invalidate(tripDetailProvider(tripId));
-        }
+          await Future.delayed(const Duration(milliseconds: 300));
 
-        context.pop();
+          if (!mounted) return; // 위젯이 dispose되었으면 네비게이션 하지 않음
+          // ✅ 저장 후 디테일 화면으로 이동
+          context.goNamed(JRoutes.detail, extra: tripId);
+        } else {
+          // tripId가 없으면 그냥 pop
+          context.pop();
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -532,10 +538,14 @@ class _EditScreenState extends ConsumerState<EditScreen> {
                             i,
                             tripId: tripId,
                           ), // tripId 있음 → Persist 실행
-                          onCommentChanged: (i, v) =>
-                              notifier.updateImageComment(i, v, tripId: tripId),
+                          // onCommentChanged: (i, v) =>
+                          //     notifier.updateImageCommentTemp(i, v),
                           coverImagePath: coverImagePath,
                           onCoverImageChanged: notifier.setCoverImage,
+                          tripId: tripId,
+                          // 입력 완료 시점에 Firestore 반영
+                          // onCommentSubmitted: (i, v) =>
+                          //     notifier.updateImageCommentPersist(i, v, tripId),
                         ),
                       ] else
                         Container(
